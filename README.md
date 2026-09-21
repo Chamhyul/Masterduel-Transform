@@ -12,10 +12,10 @@ Adobe Premiere Pro용 트랜스폼 플러그인입니다.
 ## 호환성
 
 * **지원 호스트 애플리케이션**: 
-  * **Adobe Premiere Pro**: Mercury Playback Engine 기반 Metal GPU 가속 지원 (일반 비디오 클립 및 조정 레이어 지원)
+  * **Adobe Premiere Pro**: Mercury Playback Engine 기반 GPU 가속 지원 (Windows: NVIDIA CUDA & OpenCL / macOS: Metal, 일반 비디오 클립 및 조정 레이어 지원)
 * **지원 운영체제**: 
-  * **macOS**: 지원 (macOS 11.0 이상, Apple Silicon 및 Intel Mac)
   * **Windows**: 지원 (Windows 10/11 64-bit, NVIDIA CUDA 및 OpenCL 가속 지원)
+  * **macOS**: 지원 (macOS 11.0 이상, Apple Silicon 및 Intel Mac)
 
 
 ## 사용 방법
@@ -106,6 +106,9 @@ Adobe Premiere Pro용 트랜스폼 플러그인입니다.
 * **저장소**: https://github.com/Chamhyul/Masterduel-Transform
 
 
-## 라이선스
+## 라이선스 및 사용 안내
 
-MIT License
+* **라이선스**: MIT License
+* 본 소프트웨어는 누구나 자유롭게 다운로드하여 개인 및 상업적 영상 편집/제작 목적으로 무료로 이용할 수 있습니다.
+* 본 소프트웨어 자체의 무단 유료 재판매 및 저작권자 사칭을 금지합니다.
+* 본 플러그인은 "있는 그대로(AS-IS)" 제공되며, 사용 중 발생하는 프로젝트 손상이나 데이터 손실에 대해 개발자는 법적 책임을 지지 않습니다. (안전한 작업을 위해 정기적인 백업 및 자동 저장 기능 활용을 권장합니다.)

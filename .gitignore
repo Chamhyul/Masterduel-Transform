@@ -22,7 +22,6 @@ obj/
 *.plugin
 *.aex
 *.pkg
-*.exe
 
 # Logs
 *.log
