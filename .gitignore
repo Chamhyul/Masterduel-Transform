@@ -17,9 +17,12 @@ obj/
 *.air
 *.metallib
 *.rsrc
+*.rcp
+*.rr
 *.plugin
 *.aex
 *.pkg
+*.exe
 
 # Logs
 *.log

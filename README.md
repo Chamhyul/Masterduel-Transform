@@ -15,7 +15,7 @@ Adobe Premiere Pro용 트랜스폼 플러그인입니다.
   * **Adobe Premiere Pro**: Mercury Playback Engine 기반 Metal GPU 가속 지원 (일반 비디오 클립 및 조정 레이어 지원)
 * **지원 운영체제**: 
   * **macOS**: 지원 (macOS 11.0 이상, Apple Silicon 및 Intel Mac)
-  * **Windows**: 추가 예정
+  * **Windows**: 지원 (Windows 10/11 64-bit, NVIDIA CUDA 및 OpenCL 가속 지원)
 
 
 ## 사용 방법
@@ -84,14 +84,19 @@ Adobe Premiere Pro용 트랜스폼 플러그인입니다.
 ## 설치 방법
 
 ### 1. 패키지 설치
-우측 **Releases** 탭에서 최신 macOS용 설치 패키지(`.pkg`)를 다운로드하여 실행하면 공용 플러그인 디렉터리에 자동 설치됩니다.  
-*확인되지 않은 개발자* 경고창이 나타날 경우, 다운로드한 패키지 파일을 **우클릭(또는 Control + 클릭) > 열기**를 선택하여 실행하십시오.
+* **Windows**: 우측 **Releases** 탭에서 Windows용 설치 파일(`MasterDuel Transform v0.1.0 (Windows).exe`)을 다운로드하여 실행하면 Adobe 공용 플러그인 폴더에 자동 설치됩니다.
+* **macOS**: 최신 macOS용 설치 패키지(`.pkg`)를 다운로드하여 실행합니다. (*확인되지 않은 개발자* 경고창이 나타날 경우, 우클릭 > 열기 선택)
 
 ### 2. 수동 설치
-빌드된 플러그인 번들(`AutoTransform.plugin`)을 아래 경로에 직접 복사하여 사용할 수 있습니다:
-```
-/Library/Application Support/Adobe/Common/Plug-ins/7.0/MediaCore/
-```
+빌드된 플러그인 파일을 운영체제별 공용 플러그인 폴더에 직접 복사하여 사용할 수 있습니다:
+* **Windows (`AutoTransform.aex`)**:
+  ```
+  C:\Program Files\Adobe\Common\Plug-ins\7.0\MediaCore\
+  ```
+* **macOS (`AutoTransform.plugin`)**:
+  ```
+  /Library/Application Support/Adobe/Common/Plug-ins/7.0/MediaCore/
+  ```
 
 
 ## 관련 링크

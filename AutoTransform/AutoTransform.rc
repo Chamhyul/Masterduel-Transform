@@ -1,0 +1,9 @@
+/*******************************************************************/
+/*                                                                 */
+/*  AutoTransform.rc                                               */
+/*                                                                 */
+/*  Windows Resource Script for AutoTransform plugin               */
+/*                                                                 */
+/*******************************************************************/
+
+#include "AutoTransform.rcp"

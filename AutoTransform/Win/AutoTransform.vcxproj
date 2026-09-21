@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{47C9E385-26A2-4D9A-98C3-17258380DF81}</ProjectGuid>
+    <RootNamespace>AutoTransform</RootNamespace>
+    <ProjectName>AutoTransform</ProjectName>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(ProjectDir)..\build\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)..\build\intermediate\$(Configuration)\</IntDir>
+    <TargetName>AutoTransform</TargetName>
+    <TargetExt>.aex</TargetExt>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(ProjectDir)..\build\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)..\build\intermediate\$(Configuration)\</IntDir>
+    <TargetName>AutoTransform</TargetName>
+    <TargetExt>.aex</TargetExt>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>MSWindows;WIN32;_DEBUG;_WINDOWS;_USRDLL;_USE_MATH_DEFINES;PRWIN_ENV;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Util;$(ProjectDir)..\..\local_sdk\Premiere Pro 26.0 C++ SDK\Examples\Headers;$(ProjectDir)..\..\local_sdk\Premiere Pro 26.0 C++ SDK\Examples\Headers\SP;$(ProjectDir)..\..\local_sdk\Premiere Pro 26.0 C++ SDK\Examples\Projects\GPUVideoFilter\Utils;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Headers;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Headers\SP;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Resources;$(CUDA_PATH)\include;$(CUDA_SDK_BASE_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\x64;$(CUDA_SDK_BASE_PATH)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>/EXPORT:xGPUFilterEntry %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;PRWIN_ENV;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Headers;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Resources;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>MSWindows;WIN32;NDEBUG;_WINDOWS;_USRDLL;_USE_MATH_DEFINES;PRWIN_ENV;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Util;$(ProjectDir)..\..\local_sdk\Premiere Pro 26.0 C++ SDK\Examples\Headers;$(ProjectDir)..\..\local_sdk\Premiere Pro 26.0 C++ SDK\Examples\Headers\SP;$(ProjectDir)..\..\local_sdk\Premiere Pro 26.0 C++ SDK\Examples\Projects\GPUVideoFilter\Utils;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Headers;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Headers\SP;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Resources;$(CUDA_PATH)\include;$(CUDA_SDK_BASE_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\x64;$(CUDA_SDK_BASE_PATH)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>/EXPORT:xGPUFilterEntry %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;PRWIN_ENV;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Headers;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Resources;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\AutoTransform.h" />
+    <ClInclude Include="..\AutoTransform_Strings.h" />
+    <ClInclude Include="..\..\local_sdk\Premiere Pro 26.0 C++ SDK\Examples\Projects\GPUVideoFilter\Utils\PrGPUFilterModule.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\AutoTransform.cpp" />
+    <ClCompile Include="..\AutoTransform_Strings.cpp" />
+    <ClCompile Include="..\AutoTransform_GPU_Win.cpp" />
+    <ClCompile Include="..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Util\AEFX_SuiteHelper.c" />
+    <ClCompile Include="..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Util\AEGP_SuiteHandler.cpp" />
+    <ClCompile Include="..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Util\MissingSuiteError.cpp" />
+    <ClCompile Include="..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Util\Smart_Utils.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\AutoTransformPiPL.r">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Converting PiPL for AutoTransform</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cl /D "PRWIN_ENV" /I "$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Headers" /I "$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Resources" /EP "..\AutoTransformPiPL.r" &gt; "$(IntDir)AutoTransformPiPL.rr"
+"$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Resources\PiPLTool.exe" "$(IntDir)AutoTransformPiPL.rr" "..\AutoTransform.rcp"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)AutoTransformPiPL.rr;..\AutoTransform.rcp;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Converting PiPL for AutoTransform</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cl /D "PRWIN_ENV" /I "$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Headers" /I "$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Resources" /EP "..\AutoTransformPiPL.r" &gt; "$(IntDir)AutoTransformPiPL.rr"
+"$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Resources\PiPLTool.exe" "$(IntDir)AutoTransformPiPL.rr" "..\AutoTransform.rcp"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)AutoTransformPiPL.rr;..\AutoTransform.rcp;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\AutoTransform.cu">
+      <FileType>Document</FileType>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building AutoTransform.cu (CUDA Debug)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">if defined CUDA_PATH (
+    "$(CUDA_PATH)\bin\nvcc.exe" -D_DEBUG -arch=sm_86 -use_fast_math -m64 -c -ccbin "$(VC_ExecutablePath_x64_x64)" -D_MBCS -Xcompiler /MDd,/EHsc,/W3,/nologo,/Zi -I"$(CUDA_PATH)\include" -I"$(ProjectDir).." -o "$(IntDir)AutoTransform.cu.obj" "..\AutoTransform.cu"
+) else (
+    echo "CUDA_PATH is not defined! Please make sure CUDA Toolkit is installed."
+)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)AutoTransform.cu.obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building AutoTransform.cu (CUDA Release)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">if defined CUDA_PATH (
+    "$(CUDA_PATH)\bin\nvcc.exe" -arch=sm_86 -use_fast_math -m64 -c -ccbin "$(VC_ExecutablePath_x64_x64)" -D_MBCS -Xcompiler /MD,/EHsc,/W3,/nologo -I"$(CUDA_PATH)\include" -I"$(ProjectDir).." -o "$(IntDir)AutoTransform.cu.obj" "..\AutoTransform.cu"
+) else (
+    echo "CUDA_PATH is not defined! Please make sure CUDA Toolkit is installed."
+)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)AutoTransform.cu.obj;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\AutoTransform.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
