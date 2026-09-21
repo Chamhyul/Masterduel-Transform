@@ -1,0 +1,49 @@
+[MasterDuel Transform 최종 사용자 사용권 약관 (EULA)]
+
+소프트웨어: MasterDuel Transform
+개발자: 참혈 (https://www.youtube.com/@참혈)
+저장소: https://github.com/Chamhyul/Masterduel-Transform
+라이선스: MIT License
+
+본 프로그램을 설치하거나 사용하기 전에 다음 이용 약관을 읽어 주십시오. 본 프로그램을 설치하는 것은 본 약관의 모든 내용에 동의하는 것으로 간주됩니다.
+
+1. 사용 권한 (License Grant)
+- 본 소프트웨어는 누구나 자유롭게 다운로드하여 개인 및 상업적 영상 편집/제작 목적으로 무료로 이용할 수 있습니다.
+- 영리/비영리 목적의 영상 창작물에 본 플러그인을 활용하는 데 어떠한 추가 비용이나 로열티도 발생하지 않습니다.
+
+2. 권리의 귀속 및 제한 (Rights & Restrictions)
+- 본 소프트웨어의 저작권 및 지식재산권은 원작자 '참혈'에게 있습니다.
+- 본 소프트웨어 자체를 무단으로 유료 판매하거나, 개발자의 명의를 도용하여 재배포하는 행위를 금지합니다.
+
+3. 면책 조항 (Disclaimer of Warranties & Limitation of Liability)
+- 본 소프트웨어는 "있는 그대로(AS-IS)" 제공되며, 명시적이거나 묵시적인 어떠한 보증도 제공하지 않습니다.
+- 플러그인 사용 중 발생하는 호스트 프로그램(Premiere Pro 등)의 예기치 않은 종료, 프로젝트 손상, 데이터 손실 또는 기타 직·간접적 손해에 대해 개발자는 법적 책임을 지지 않습니다.
+- 안전한 작업을 위해 프로젝트 자동 저장(Auto-Save) 기능 활용 및 정기적인 백업을 권장합니다.
+
+4. 상표권 고지 (Trademarks)
+- "Adobe", "Premiere Pro"는 Adobe Systems Incorporated의 등록 상표입니다.
+- "Master Duel"은 Konami Digital Entertainment의 상표입니다.
+- 본 소프트웨어는 개인이 개발한 비공식 서드파티 편집 도구이며, 위 관련 기업들과 어떠한 제휴 관계도 없습니다.
+
+================================================================================
+MIT License
+
+Copyright (c) 2026 참혈 (Chamhyul)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
