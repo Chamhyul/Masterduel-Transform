@@ -187,6 +187,97 @@ AcquireNodeForTime(inSequenceTime)
   - **사용자 검증 완료**: 일반 비디오 클립 및 조정 레이어 모두 칼날로 분할된 지점에서 **정확히 0프레임부터 효과 시작 확인 ("문제 해결 됐어")**.
 - **최종 상태**: **해결 완료 및 아키텍처 영구 보존**.
 
+---
+
+## 7. Windows 포팅 및 설치 파일 제작 가이드라인 (Windows 에이전트 필독)
+
+> [!IMPORTANT]
+> **Windows 개발 환경 안내**: 본 프로젝트는 macOS(Apple Silicon / Metal)에서 완벽히 검증 및 첫 배포(v0.1.0)를 완료한 상태입니다. Windows 데스크톱에서 NVIDIA(CUDA) 및 AMD(OpenCL) GPU 가속을 완성하고 Windows 전용 설치 파일(`.exe`)을 제작하기 위한 지침입니다.
+
+### 1) 필수 개발 환경 및 준비 사항
+1. **Visual Studio 2022**:
+   - 워크로드: **C++를 사용한 데스크톱 개발** 필수 설치.
+2. **NVIDIA CUDA Toolkit (12.x)**:
+   - 설치 시 Visual Studio와의 빌드 커스터마이징(Build Customizations)이 자동 연동됨.
+3. **Windows용 Adobe SDK**:
+   - `Premiere Pro 26.0 C++ SDK (Windows)`
+   - `Adobe After Effects SDK 26.5 (Windows)`
+   - *주의*: 저장소에는 라이선스 보호를 위해 SDK가 제외되어 있으므로 로컬 프로젝트 상위 또는 동일 경로에 배치해야 함.
+4. **Inno Setup 6 (설치 프로그램 제작 도구)**:
+   - 공식 사이트(jrsoftware.org)에서 무료 다운로드 설치.
+
+---
+
+### 2) Visual Studio 프로젝트 구성 팁 (Fast-Track)
+* **빈 프로젝트를 처음부터 만들지 말 것**:
+  - Windows SDK 내의 **`Premiere Pro 26.0 C++ SDK/Examples/Projects/GPUVideoFilter/Vignette/Win/Vignette.vcxproj`** (또는 `SDK_ProcAmp.vcxproj`)를 복사하여 프로젝트 템플릿으로 사용할 것.
+  - 이 프로젝트 파일에는 이미 **CUDA 빌드 규칙(CUDA 12.x.props)**, Premiere Pro MPE 헤더 인클루드 경로, 라이브러리 링크 및 리소스 컴파일러(`.rc`) 설정이 완벽하게 갖추어져 있음.
+* **출력 바이너리 파일명**:
+  - Windows 환경의 Adobe 플러그인은 DLL 바이너리이며 확장자만 `.aex`임: **`AutoTransform.aex`**
+
+---
+
+### 3) GPU 파이프라인 포팅 핵심 규칙 (Never Repeat)
+
+1. **타이밍 및 세그먼트 탐색 로직 100% 무결성 유지**:
+   - `FindAdjustmentLayerInPoint`, `ExtractFromAdjustmentNode`, `FindInPointTicksInHierarchy` 등 `AGENT.md 5장`에 명시된 **통합 InPoint 탐색 아키텍처는 단 1글자도 변경하지 말고 공통으로 사용할 것**.
+   - `currentFrame`, `duration`, 셔터각 서브샘플 적분(`subSamples`), 화면 분할 경계(`cropLeft`, `cropRight`) 계산은 모든 플랫폼이 동일하게 공유함.
+
+2. **NVIDIA (CUDA) 파이프라인 사양**:
+   - 프레임워크: `PrGPUDeviceFramework_CUDA`
+   - 커널 파일: `AutoTransform.cu`
+   - 정밀도: FP32(`float4`) 및 FP16(`half4`, `#include <cuda_fp16.h>`, `__half2float`, `__float2half_rn`) 지원.
+   - **In-place 원본 버퍼 오염 방지**: Premiere Pro의 출력 버퍼는 단일 공간이므로, 원본 버퍼를 직접 읽으면서 쓰면 픽셀 왜곡 발생. 필터 인스턴스 멤버(`void* mCUDATempBuffer`)로 임시 디바이스 버퍼를 캐싱하고, `cudaMemcpyAsync`로 복사 후 커널 실행 필수! (매 프레임 `cudaMalloc` 금지, 해상도 변경 시에만 재할당)
+
+3. **AMD / Intel (OpenCL) 파이프라인 사양**:
+   - 프레임워크: `PrGPUDeviceFramework_OpenCL`
+   - 런타임 JIT 컴파일: 외부 파일 로드 실패 방지를 위해 OpenCL 커널 소스를 C++ 원시 문자열 리터럴(`R"===( ... )==="`)로 임베딩하여 `clCreateProgramWithSource` + `clBuildProgram` + `clCreateKernel` 수행.
+   - 최초 1회만 컴파일하도록 `cl_kernel sOpenCLKernelCache[kMaxDevices]` 캐시 유지.
+   - 정밀도: OpenCL 1.1+ 표준 내장 함수인 `vload_half4`, `vstore_half4_rtz`를 사용하여 하드웨어 익스텐션 종속성 없이 안전하게 지원.
+   - In-place 복사: `clEnqueueCopyBuffer`를 통한 임시 버퍼(`mCLTempBuffer`) 백업 후 실행.
+
+---
+
+### 4) Inno Setup을 이용한 Windows 설치 프로그램 제작 스크립트 규격
+
+* Windows에서 빌드된 `AutoTransform.aex`를 일반 사용자에게 배포하기 위해 Inno Setup 스크립트(`installer_win.iss`)를 작성하여 컴파일합니다.
+* **설치 대상 공식 경로**: `C:\Program Files\Adobe\Common\Plug-ins\7.0\MediaCore\`
+
+```ini
+[Setup]
+AppName=MasterDuel Transform
+AppVersion=0.1.0
+AppPublisher=참혈
+AppPublisherURL=https://www.youtube.com/@참혈
+AppSupportURL=https://github.com/Chamhyul/Masterduel-Transform
+DefaultDirName={commonpf}\Adobe\Common\Plug-ins\7.0\MediaCore
+DisableDirPage=yes
+OutputBaseFilename=MasterDuel Transform v0.1.0 (Windows)
+OutputDir=.
+Compression=lzma2/ultra64
+SolidCompression=yes
+ArchitecturesInstallIn64BitMode=x64
+
+[Files]
+Source: "AutoTransform.aex"; DestDir: "{app}"; Flags: ignoreversion
+
+[Messages]
+WelcomeLabel1=MasterDuel Transform v0.1.0 설치를 시작합니다.
+WelcomeLabel2=Adobe Premiere Pro용 키프레임 없는 자동 트랜스폼 플러그인입니다.%n%n설치를 진행하시면 Adobe 공용 플러그인 폴더에 자동으로 등록됩니다.
+```
+
+* 산출물: **`MasterDuel Transform v0.1.0 (Windows).exe`**
+
+---
+
+### 5) GitHub Releases 배포 동기화
+* Windows 설치 프로그램 생성이 완료되면 GitHub CLI를 통해 기존 v0.1.0 릴리즈에 에셋을 추가 업로드합니다:
+  ```bash
+  gh release upload v0.1.0 "MasterDuel Transform v0.1.0 (Windows).exe"
+  ```
+* 릴리즈 제목 및 노트를 `MasterDuel Transform v0.1.0 (macOS 및 Windows)`로 갱신하여 멀티 플랫폼 배포를 완성합니다.
+
+
 
 
 
