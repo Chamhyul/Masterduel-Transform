@@ -26,6 +26,8 @@ Adobe Premiere Pro용 트랜스폼 플러그인입니다.
 
 ### 2. 파라미터 구성
 
+<img src="docs/images/ui_parameters.png" width="320" alt="파라미터 컨트롤 패널">
+
 #### 시작점 & 도착점 (Position & Scale)
 * **Start Position / Start Scale**: 애니메이션 시작 시점의 위치와 크기를 지정합니다.
 * **End Position / End Scale**: 애니메이션 종료 시점의 최종 도착 위치와 크기를 지정합니다.
@@ -40,6 +42,8 @@ Adobe Premiere Pro용 트랜스폼 플러그인입니다.
 * **Samples**: 모션 블러 연산 시 서브샘플링 횟수를 설정합니다. (기본값: 8)
 
 ### 3. 전용 프리셋 UI (Buttons & Preset Code)
+
+<img src="docs/images/ui_buttons.png" width="320" alt="전용 프리셋 버튼 패널">
 
 효과 컨트롤 패널 내에 위치한 버튼형 UI를 통해 복잡한 수치 조절 없이 직관적으로 이동 경로를 설정할 수 있습니다.
 
