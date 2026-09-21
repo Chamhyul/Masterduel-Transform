@@ -3,9 +3,11 @@
 Adobe Premiere Pro용 트랜스폼 플러그인입니다.  
 별도의 키프레임 생성 없이, 클립이나 조정 레이어의 시작점을 기준으로 지정한 프레임 동안 위치와 크기를 자동으로 변환합니다.
 
+
 ## 개요
 
 영상 편집 시 반복되는 위치 이동 및 크기 조절 작업을 간소화하기 위해 제작되었습니다. 클립의 인포인트(In-point)와 컷편집 지점을 자동으로 감지하여 시작 위치에서 목표 위치로의 움직임을 생성합니다.
+
 
 ## 호환성
 
@@ -14,6 +16,7 @@ Adobe Premiere Pro용 트랜스폼 플러그인입니다.
 * **지원 운영체제**: 
   * **macOS**: 지원 (macOS 11.0 이상, Apple Silicon 및 Intel Mac)
   * **Windows**: 추가 예정
+
 
 ## 사용 방법
 
@@ -73,6 +76,7 @@ Adobe Premiere Pro용 트랜스폼 플러그인입니다.
 * 사전에 정의된 프리셋 번호별 좌표와 배율이 저장되어 있습니다.
 * 수치를 수정하여 사용자가 원하는 레이아웃으로 변경한 뒤, Premiere Pro의 **'사전 설정 저장(Save Preset)'** 기능을 통해 저장해 두면 이후 편집에서도 계속 재사용할 수 있습니다.
 
+
 ## 설치 방법
 
 ### 1. 패키지 설치
@@ -85,11 +89,13 @@ Adobe Premiere Pro용 트랜스폼 플러그인입니다.
 /Library/Application Support/Adobe/Common/Plug-ins/7.0/MediaCore/
 ```
 
+
 ## 관련 링크
 
 * **제작자**: 참혈
 * **유튜브 채널**: https://www.youtube.com/@참혈
 * **저장소**: https://github.com/Chamhyul/Masterduel-Transform
+
 
 ## 라이선스
 
