@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Adobe SDKs (Proprietary)
+AdobeAfterEffectsSDK_*
+Premiere Pro * SDK*
+*.zip
+
+# Build artifacts
+build/
+AutoTransform/build/
+obj/
+*.o
+*.air
+*.metallib
+*.rsrc
+*.plugin
+*.aex
+*.pkg
+
+# Logs
+*.log
+autotransform_debug.log
+
+# IDE & Editor
+.vscode/
+.idea/
+*.xcodeproj/
+*.xcworkspace/
