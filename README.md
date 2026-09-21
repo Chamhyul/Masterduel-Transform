@@ -1,64 +1,57 @@
-# MasterDuel Transform (AutoTransform)
+# MasterDuel Transform
 
-Adobe Premiere Pro 및 After Effects용 고성능 모션 변환 및 GPU 가속 플러그인입니다.  
-수동 키프레임 작업 없이 컷편집 지점 및 클립 타이밍에 맞추어 직관적인 이동/크기 조절과 모션 블러를 자동으로 렌더링합니다.
-
----
-
-## ✨ 주요 기능 (Features)
-
-1. **키프레임 없는 자동 트랜스폼 (No-Keyframe Auto Transform)**:
-   - 클립의 컷편집 시작점(In-point) 및 지속 시간(Duration)을 감지하여 시작 위치/크기에서 목표 위치/크기로 부드러운 애니메이션 자동 생성.
-   - 일반 비디오 클립뿐만 아니라 **조정 레이어(Adjustment Layer)**에서도 완벽한 0프레임 동기화 지원.
-
-2. **Apple Metal GPU 가속 및 서브샘플링 모션 블러 (Metal MPE & Motion Blur)**:
-   - Apple Silicon Mac을 위한 네이티브 Metal GPU 파이프라인 탑재.
-   - 셔터각(Shutter Angle, 0° ~ 720°) 및 다중 서브샘플링(Samples, 2 ~ 32)을 통한 고품질 광학 모션 블러 렌더링.
-
-3. **이징 프리셋 및 실시간 양방향 UI 바인딩**:
-   - `Linear`, `Ease In`, `Ease Out`, `Ease In & Out`, `Custom` 프리셋 제공.
-   - 슬라이더 조작 시 드롭다운이 즉시 동기화되는 실시간 반응형 파라미터 UI.
-
-4. **프리셋 분할 및 모디파이어 화면 분할 투명화**:
-   - 화면 분할 모드(`<`, `>`)에 따른 가시 영역 절삭 및 마진 블리딩 자동 처리.
+Adobe Premiere Pro용 트랜스폼 플러그인입니다.  
+별도의 키프레임 생성 없이, 클립이나 조정 레이어의 시작점을 기준으로 지정한 프레임 동안 위치와 크기를 자동으로 변환합니다.
 
 ---
 
-## 🛠 빌드 요구사항 (Build Prerequisites)
+## 개요
 
-본 프로젝트는 Adobe 사유 SDK를 포함하지 않습니다. 로컬에서 직접 빌드하려면 다음 공식 SDK가 상위 또는 지정 경로에 준비되어 있어야 합니다:
-
-- **운영체제**: macOS 11.0 Big Sur 이상 (Apple Silicon / Intel)
-- **도구체인**: Clang (Xcode Command Line Tools), `metal`, `Rez`
-- **Adobe SDK**:
-  - `Adobe After Effects SDK 26.5` (또는 호환 버전)
-  - `Adobe Premiere Pro 26.0 C++ SDK` (또는 호환 버전)
+영상 편집 시 반복되는 위치 이동 및 크기 조절 작업을 간소화하기 위해 제작되었습니다. 클립의 인포인트(In-point)와 컷편집 지점을 자동으로 감지하여 시작 위치에서 목표 위치로의 움직임을 생성합니다.
 
 ---
 
-## 📦 빌드 방법 (Building on macOS)
+## 호환성
 
-```bash
-cd AutoTransform/Mac
-./build.sh
+* **지원 호스트 애플리케이션**: 
+  * **Adobe Premiere Pro**: Mercury Playback Engine 기반 Metal GPU 가속 지원 (일반 비디오 클립 및 조정 레이어 지원)
+* **지원 운영체제**: 
+  * **macOS**: 지원 (macOS 11.0 이상, Apple Silicon 및 Intel Mac)
+  * **Windows**: 추가 예정
+
+---
+
+## 기능 설명
+
+* **키프레임 없는 위치 및 크기 변환**: 클립 또는 조정 레이어 시작 지점을 기준으로 지속 시간(프레임 단위) 동안 애니메이션을 생성합니다.
+* **이징 설정**: Linear, Ease In, Ease Out, Ease In & Out 및 수동 퍼센트 조절(Custom)을 지원하며, 슬라이더 조작 시 드롭다운 수치가 실시간으로 연동됩니다.
+* **모션 블러**: 셔터각(0° ~ 720°)과 서브샘플링 횟수를 설정하여 이동 구간의 모션 블러를 조절할 수 있습니다. 셔터각이 0°인 경우 모션 블러 연산을 건너뛰고 단일 패스로 처리됩니다.
+* **화면 분할 크롭**: 프리셋 매칭 및 모디파이어 설정에 따라 좌우 분할 영역의 절삭 및 마진 블리딩을 적용합니다.
+
+---
+
+## 설치 방법
+
+### 1. 패키지 설치
+우측 **Releases** 탭에서 최신 macOS용 설치 패키지(`.pkg`)를 다운로드하여 실행하면 공용 플러그인 디렉터리에 자동 설치됩니다.  
+*확인되지 않은 개발자* 경고창이 나타날 경우, 다운로드한 패키지 파일을 **우클릭(또는 Control + 클릭) > 열기**를 선택하여 실행하십시오.
+
+### 2. 수동 설치
+빌드된 플러그인 번들(`AutoTransform.plugin`)을 아래 경로에 직접 복사하여 사용할 수 있습니다:
 ```
-
-빌드가 완료되면 `AutoTransform/build/AutoTransform.plugin` 번들이 생성됩니다.
-
----
-
-## 📥 설치 (Installation)
-
-### 간편 설치 (배포 패키지)
-릴리즈(Releases) 탭에서 제공되는 `MasterDuel Transform v0.1.0.pkg` 파일을 다운로드하여 실행하면 Premiere Pro 공용 플러그인 폴더에 자동 설치됩니다.
-
-### 수동 설치 경로
-```bash
-sudo cp -R "AutoTransform/build/AutoTransform.plugin" "/Library/Application Support/Adobe/Common/Plug-ins/7.0/MediaCore/"
+/Library/Application Support/Adobe/Common/Plug-ins/7.0/MediaCore/
 ```
 
 ---
 
-## 📄 라이선스 (License)
+## 관련 링크
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+* **제작자**: 참혈
+* **유튜브 채널**: https://www.youtube.com/@참혈
+* **저장소**: https://github.com/Chamhyul/Masterduel-Transform
+
+---
+
+## 라이선스
+
+MIT License
