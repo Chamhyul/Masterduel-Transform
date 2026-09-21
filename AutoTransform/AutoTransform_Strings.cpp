@@ -9,16 +9,16 @@
 typedef struct
 {
     A_u_long index;
-    A_char str[256];
+    A_char str[512];
 } TableString;
 
 TableString g_strs[StrID_NUMTYPES] = {
     { StrID_NONE,
       "" },
     { StrID_Name,
-      "MasterDual Transform" },
+      "MasterDuel Transform" },
     { StrID_Description,
-      "Automated position and scale transform.\rNo keyframes needed.\rv0.1" },
+      "MasterDuel Transform v0.1.0 (macOS)\r개발자: 참혈\r유튜브: https://www.youtube.com/@참혈\rGitHub: https://github.com/Chamhyul/Masterduel-Transform" },
 
     /* ---- 신규: Preset UI & Transform ---- */
     { StrID_Topic_Transform,
