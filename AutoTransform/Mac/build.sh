@@ -6,8 +6,19 @@ set -e
 
 # Paths
 PROJ_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-AE_SDK_DIR="$PROJ_DIR/../AdobeAfterEffectsSDK_26.5_MacOS/Examples"
-PREM_SDK_DIR="$PROJ_DIR/../Premiere Pro 26.0 C++ SDK/Examples"
+
+# Resolve SDK paths (supports local_sdk/ folder or root)
+if [ -d "$PROJ_DIR/../local_sdk/AdobeAfterEffectsSDK_26.5_MacOS/Examples" ]; then
+    AE_SDK_DIR="$PROJ_DIR/../local_sdk/AdobeAfterEffectsSDK_26.5_MacOS/Examples"
+else
+    AE_SDK_DIR="$PROJ_DIR/../AdobeAfterEffectsSDK_26.5_MacOS/Examples"
+fi
+
+if [ -d "$PROJ_DIR/../local_sdk/Premiere Pro 26.0 C++ SDK/Examples" ]; then
+    PREM_SDK_DIR="$PROJ_DIR/../local_sdk/Premiere Pro 26.0 C++ SDK/Examples"
+else
+    PREM_SDK_DIR="$PROJ_DIR/../Premiere Pro 26.0 C++ SDK/Examples"
+fi
 BUILD_DIR="$PROJ_DIR/build"
 PLUGIN_DIR="$BUILD_DIR/AutoTransform.plugin"
 CONTENTS_DIR="$PLUGIN_DIR/Contents"

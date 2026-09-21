@@ -5,9 +5,8 @@
 Icon
 ._*
 
-# Adobe SDKs (Proprietary)
-AdobeAfterEffectsSDK_*
-Premiere Pro * SDK*
+# Local SDK & Proprietary Resources
+local_sdk/
 *.zip
 
 # Build artifacts

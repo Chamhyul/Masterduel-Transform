@@ -202,7 +202,7 @@ AcquireNodeForTime(inSequenceTime)
 3. **Windows용 Adobe SDK**:
    - `Premiere Pro 26.0 C++ SDK (Windows)`
    - `Adobe After Effects SDK 26.5 (Windows)`
-   - *주의*: 저장소에는 라이선스 보호를 위해 SDK가 제외되어 있으므로 로컬 프로젝트 상위 또는 동일 경로에 배치해야 함.
+   - *주의*: 저장소에는 라이선스 보호를 위해 SDK가 제외(`.gitignore`)되어 있으므로 프로젝트 루트의 `local_sdk/` 폴더 안에 배치해야 함.
 4. **Inno Setup 6 (설치 프로그램 제작 도구)**:
    - 공식 사이트(jrsoftware.org)에서 무료 다운로드 설치.
 
