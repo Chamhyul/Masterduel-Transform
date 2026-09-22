@@ -22,6 +22,9 @@ obj/
 *.plugin
 *.aex
 *.pkg
+*.pdb
+*.cso
+*.rs
 
 # Logs
 *.log

@@ -5,5 +5,52 @@
 /*  Windows Resource Script for AutoTransform plugin               */
 /*                                                                 */
 /*******************************************************************/
+#pragma code_page(65001)
 
+#include <winresrc.h>
 #include "AutoTransform.rcp"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     0,1,1,0
+PRODUCTVERSION  0,1,1,0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+FILEFLAGS       VS_FF_DEBUG
+#else
+FILEFLAGS       0x0L
+#endif
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_DLL
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "041204b0"
+        BEGIN
+            VALUE "CompanyName",      "참혈"
+            VALUE "FileDescription",  "MasterDuel Transform Plugin for Premiere Pro"
+            VALUE "FileVersion",      "0.1.1.0"
+            VALUE "InternalName",     "AutoTransform"
+            VALUE "LegalCopyright",   "Copyright (C) 2026 참혈. All rights reserved."
+            VALUE "OriginalFilename", "AutoTransform.aex"
+            VALUE "ProductName",      "MasterDuel Transform"
+            VALUE "ProductVersion",   "0.1.1.0"
+        END
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName",      "참혈"
+            VALUE "FileDescription",  "MasterDuel Transform Plugin for Premiere Pro"
+            VALUE "FileVersion",      "0.1.1.0"
+            VALUE "InternalName",     "AutoTransform"
+            VALUE "LegalCopyright",   "Copyright (C) 2026 참혈. All rights reserved."
+            VALUE "OriginalFilename", "AutoTransform.aex"
+            VALUE "ProductName",      "MasterDuel Transform"
+            VALUE "ProductVersion",   "0.1.1.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0412, 1200, 0x0409, 1200
+    END
+END
+

@@ -70,13 +70,14 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\x64;$(CUDA_SDK_BASE_PATH)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/EXPORT:xGPUFilterEntry %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;PRWIN_ENV;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Headers;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Resources;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/c 65001 %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -97,28 +98,48 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\x64;$(CUDA_SDK_BASE_PATH)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/EXPORT:xGPUFilterEntry %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;PRWIN_ENV;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Headers;$(ProjectDir)..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Resources;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/c 65001 %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\AutoTransform.h" />
     <ClInclude Include="..\AutoTransform_Strings.h" />
+    <ClInclude Include="..\DirectXUtils.h" />
+    <ClInclude Include="..\AutoTransform_CSO.h" />
     <ClInclude Include="..\..\local_sdk\Premiere Pro 26.0 C++ SDK\Examples\Projects\GPUVideoFilter\Utils\PrGPUFilterModule.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\AutoTransform.cpp" />
     <ClCompile Include="..\AutoTransform_Strings.cpp" />
     <ClCompile Include="..\AutoTransform_GPU_Win.cpp" />
+    <ClCompile Include="..\DirectXUtils.cpp" />
     <ClCompile Include="..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Util\AEFX_SuiteHelper.c" />
     <ClCompile Include="..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Util\AEGP_SuiteHandler.cpp" />
     <ClCompile Include="..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Util\MissingSuiteError.cpp" />
     <ClCompile Include="..\..\local_sdk\AfterEffectsSDK_26.5_win\Examples\Util\Smart_Utils.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\AutoTransform.hlsl">
+      <FileType>Document</FileType>
+      <Message>Compiling AutoTransform.hlsl and generating AutoTransform_CSO.h</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\dxc.exe" "%(FullPath)" -E main -Fo "$(ProjectDir)..\AutoTransform.cso" -T cs_6_5 -enable-16bit-types
+"C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\dxc.exe" "$(ProjectDir)..\AutoTransform.cso" -dumpbin -extractrootsignature -Fo "$(ProjectDir)..\AutoTransform.rs"
+powershell -ExecutionPolicy Bypass -File "$(ProjectDir)..\generate_cso_header.ps1"
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)..\AutoTransform.cso;$(ProjectDir)..\AutoTransform.rs;$(ProjectDir)..\AutoTransform_CSO.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\dxc.exe" "%(FullPath)" -E main -Fo "$(ProjectDir)..\AutoTransform.cso" -T cs_6_5 -enable-16bit-types
+"C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\dxc.exe" "$(ProjectDir)..\AutoTransform.cso" -dumpbin -extractrootsignature -Fo "$(ProjectDir)..\AutoTransform.rs"
+powershell -ExecutionPolicy Bypass -File "$(ProjectDir)..\generate_cso_header.ps1"
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)..\AutoTransform.cso;$(ProjectDir)..\AutoTransform.rs;$(ProjectDir)..\AutoTransform_CSO.h;%(Outputs)</Outputs>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\AutoTransformPiPL.r">
@@ -137,14 +158,14 @@
       <FileType>Document</FileType>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building AutoTransform.cu (CUDA Debug)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">if defined CUDA_PATH (
-    "$(CUDA_PATH)\bin\nvcc.exe" -D_DEBUG -arch=sm_86 -use_fast_math -m64 -c -ccbin "$(VC_ExecutablePath_x64_x64)" -D_MBCS -Xcompiler /MDd,/EHsc,/W3,/nologo,/Zi -I"$(CUDA_PATH)\include" -I"$(ProjectDir).." -o "$(IntDir)AutoTransform.cu.obj" "..\AutoTransform.cu"
+    "$(CUDA_PATH)\bin\nvcc.exe" -D_DEBUG -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 -gencode arch=compute_89,code=sm_89 -gencode arch=compute_120,code=sm_120 -gencode arch=compute_120,code=compute_120 -use_fast_math -m64 -c -ccbin "$(VC_ExecutablePath_x64_x64)" -D_MBCS -Xcompiler /MDd,/EHsc,/W3,/nologo,/Zi -I"$(CUDA_PATH)\include" -I"$(ProjectDir).." -o "$(IntDir)AutoTransform.cu.obj" "..\AutoTransform.cu"
 ) else (
     echo "CUDA_PATH is not defined! Please make sure CUDA Toolkit is installed."
 )</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)AutoTransform.cu.obj;%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building AutoTransform.cu (CUDA Release)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">if defined CUDA_PATH (
-    "$(CUDA_PATH)\bin\nvcc.exe" -arch=sm_86 -use_fast_math -m64 -c -ccbin "$(VC_ExecutablePath_x64_x64)" -D_MBCS -Xcompiler /MD,/EHsc,/W3,/nologo -I"$(CUDA_PATH)\include" -I"$(ProjectDir).." -o "$(IntDir)AutoTransform.cu.obj" "..\AutoTransform.cu"
+    "$(CUDA_PATH)\bin\nvcc.exe" -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 -gencode arch=compute_89,code=sm_89 -gencode arch=compute_120,code=sm_120 -gencode arch=compute_120,code=compute_120 -use_fast_math -m64 -c -ccbin "$(VC_ExecutablePath_x64_x64)" -D_MBCS -Xcompiler /MD,/EHsc,/W3,/nologo -I"$(CUDA_PATH)\include" -I"$(ProjectDir).." -o "$(IntDir)AutoTransform.cu.obj" "..\AutoTransform.cu"
 ) else (
     echo "CUDA_PATH is not defined! Please make sure CUDA Toolkit is installed."
 )</Command>

@@ -26,9 +26,12 @@
 #include "AutoTransform.h"
 #include "PrGPUFilterModule.h"
 #include "PrSDKSequenceInfoSuite.h"
+#include "DirectXUtils.h"
+#include "AutoTransform_CSO.h"
 
-#define HAS_CUDA   1
-#define HAS_OPENCL 1
+#define HAS_CUDA    1
+#define HAS_OPENCL  1
+#define HAS_DIRECTX 1
 
 // 서브샘플 구조체 (AutoTransform.cu 및 AutoTransform.metal과 100% 일치)
 struct TransformSample
@@ -53,6 +56,35 @@ struct AutoTransformParams
     float cropRight;  // 가시 영역 오른쪽 경계 (픽셀 단위)
 };
 
+// DirectX 12 전용 구조체 (16바이트 정렬 및 32개 서브샘플 내장)
+struct TransformSampleDX
+{
+    float posX;
+    float posY;
+    float scale;
+    float _pad;
+};
+
+struct AutoTransformParamsDX
+{
+    int   srcPitch;
+    int   destPitch;
+    int   is16f;
+    int   width;
+
+    int   height;
+    int   numSamples;
+    float cx;
+    float cy;
+
+    float cropLeft;
+    float cropRight;
+    float pad0;
+    float pad1;
+
+    TransformSampleDX samples[32];
+};
+
 // CUDA 커널 호스트 래퍼 선언 (AutoTransform.cu에 정의)
 extern "C" void AutoTransform_CUDA(
     const void*                 srcBuf,
@@ -65,6 +97,10 @@ extern "C" void AutoTransform_CUDA(
 // OpenCL 임베디드 커널 소스 (외부 파일 의존성 없는 JIT 런타임 컴파일)
 // =========================================================================
 static const char* kEmbeddedOpenCLSource = R"CLC(
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
 typedef struct
 {
     float posX;
@@ -219,6 +255,8 @@ __kernel void kAutoTransformKernelCL(
 
 enum { kMaxDevices = 16 };
 static cl_kernel sOpenCLKernelCache[kMaxDevices] = {};
+static std::vector<DXContextPtr> sDXContextCache;
+static std::vector<ShaderObjectPtr> sDXShaderObjectCache;
 
 static inline size_t RoundUpMultiple(size_t inVal, size_t inMult)
 {
@@ -643,6 +681,14 @@ public:
             mCLParamBufferSize = 0;
         }
 #endif
+
+#if HAS_DIRECTX
+        if (mDXTempBuffer)
+        {
+            mDXTempBuffer.Reset();
+            mDXTempBufferSize = 0;
+        }
+#endif
     }
 
     virtual prSuiteError Initialize(PrGPUFilterInstance* ioInstanceData) override
@@ -715,6 +761,58 @@ public:
             return suiteError_Fail;
 #endif
         }
+        else if (mDeviceInfo.outDeviceFramework == PrGPUDeviceFramework_DirectX)
+        {
+#if HAS_DIRECTX
+            if (mDeviceIndex >= (csSDK_int32)sDXContextCache.size())
+            {
+                sDXContextCache.resize(mDeviceIndex + 1);
+                sDXShaderObjectCache.resize(mDeviceIndex + 1);
+            }
+            if (!sDXContextCache[mDeviceIndex])
+            {
+                DXContextPtr dxContext = std::make_shared<DXContext>();
+                if (!dxContext->Initialize(
+                    (ID3D12Device*)mDeviceInfo.outDeviceHandle,
+                    (ID3D12CommandQueue*)mDeviceInfo.outCommandQueueHandle))
+                {
+                    return suiteError_Fail;
+                }
+
+                ShaderObjectPtr shaderObj = std::make_shared<ShaderObject>();
+
+                // 1) 외부 폴더에 컴파일된 셰이더 파일이 있는지 먼저 확인
+                std::wstring csoPath, sigPath;
+                bool loaded = false;
+                if (GetShaderPath(L"AutoTransform", csoPath, sigPath))
+                {
+                    loaded = dxContext->LoadShader(csoPath.c_str(), sigPath.c_str(), shaderObj);
+                }
+
+                // 2) 외부 파일이 없으면 임베디드 바이트코드(AutoTransform_CSO.h)로부터 직접 생성 (무결점 단일 바이너리)
+                if (!loaded)
+                {
+                    loaded = dxContext->LoadShaderFromMemory(
+                        kAutoTransformCSO,
+                        kAutoTransformCSOSize,
+                        kAutoTransformRS,
+                        kAutoTransformRSSize,
+                        shaderObj);
+                }
+
+                if (!loaded)
+                {
+                    return suiteError_Fail;
+                }
+
+                sDXShaderObjectCache[mDeviceIndex] = shaderObj;
+                sDXContextCache[mDeviceIndex] = dxContext;
+            }
+            return suiteError_NoError;
+#else
+            return suiteError_Fail;
+#endif
+        }
 
         return suiteError_NotImplemented;
     }
@@ -731,7 +829,8 @@ public:
         }
 
         if (mDeviceInfo.outDeviceFramework != PrGPUDeviceFramework_CUDA &&
-            mDeviceInfo.outDeviceFramework != PrGPUDeviceFramework_OpenCL)
+            mDeviceInfo.outDeviceFramework != PrGPUDeviceFramework_OpenCL &&
+            mDeviceInfo.outDeviceFramework != PrGPUDeviceFramework_DirectX)
         {
             return suiteError_NotImplemented;
         }
@@ -1252,6 +1351,130 @@ public:
             return suiteError_NotImplemented;
 #endif
         }
+        else if (mDeviceInfo.outDeviceFramework == PrGPUDeviceFramework_DirectX)
+        {
+#if HAS_DIRECTX
+            if (mDeviceIndex >= (csSDK_int32)sDXContextCache.size() || !sDXContextCache[mDeviceIndex])
+            {
+                return suiteError_Fail;
+            }
+
+            DXContextPtr dxContext = sDXContextCache[mDeviceIndex];
+            ID3D12Device* device = dxContext->mDevice.Get();
+            ID3D12GraphicsCommandList* cmdList = dxContext->mCommandList.Get();
+            ID3D12Resource* destResource = (ID3D12Resource*)destFrameData;
+
+            // 1) 임시 디바이스 버퍼 할당 및 캐싱
+            if (!mDXTempBuffer || mDXTempBufferSize < totalBytes)
+            {
+                D3D12_RESOURCE_DESC bufDesc = {};
+                bufDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+                bufDesc.Width = totalBytes;
+                bufDesc.Height = 1;
+                bufDesc.DepthOrArraySize = 1;
+                bufDesc.MipLevels = 1;
+                bufDesc.Format = DXGI_FORMAT_UNKNOWN;
+                bufDesc.SampleDesc.Count = 1;
+                bufDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+                bufDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+                D3D12_HEAP_PROPERTIES heapProps = {};
+                heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+                mDXTempBuffer.Reset();
+                HRESULT hr = device->CreateCommittedResource(
+                    &heapProps,
+                    D3D12_HEAP_FLAG_NONE,
+                    &bufDesc,
+                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+                    nullptr,
+                    IID_PPV_ARGS(mDXTempBuffer.GetAddressOf()));
+                if (FAILED(hr))
+                {
+                    return suiteError_Fail;
+                }
+                mDXTempBufferSize = totalBytes;
+            }
+
+            // 2) 원본 영상을 임시 디바이스 버퍼로 복사 (destResource -> mDXTempBuffer)
+            D3D12_RESOURCE_BARRIER preCopyBarriers[2] = {};
+            preCopyBarriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            preCopyBarriers[0].Transition.pResource = destResource;
+            preCopyBarriers[0].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            preCopyBarriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+            preCopyBarriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+
+            preCopyBarriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            preCopyBarriers[1].Transition.pResource = mDXTempBuffer.Get();
+            preCopyBarriers[1].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            preCopyBarriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+            preCopyBarriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+
+            cmdList->ResourceBarrier(2, preCopyBarriers);
+
+            cmdList->CopyResource(mDXTempBuffer.Get(), destResource);
+
+            // 3) 복사 후 상태 전환:
+            D3D12_RESOURCE_BARRIER postCopyBarriers[2] = {};
+            postCopyBarriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            postCopyBarriers[0].Transition.pResource = destResource;
+            postCopyBarriers[0].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            postCopyBarriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+            postCopyBarriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+            postCopyBarriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            postCopyBarriers[1].Transition.pResource = mDXTempBuffer.Get();
+            postCopyBarriers[1].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            postCopyBarriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+            postCopyBarriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+
+            cmdList->ResourceBarrier(2, postCopyBarriers);
+
+            // 4) 파라미터 구조체 설정
+            AutoTransformParamsDX paramsDX = {};
+            paramsDX.srcPitch   = destPitch;
+            paramsDX.destPitch  = destPitch;
+            paramsDX.is16f      = is16f;
+            paramsDX.width      = width;
+            paramsDX.height     = height;
+            paramsDX.numSamples = (int)subSamples.size();
+            paramsDX.cx         = (float)width  / 2.0f;
+            paramsDX.cy         = (float)height / 2.0f;
+            paramsDX.cropLeft   = params.cropLeft;
+            paramsDX.cropRight  = params.cropRight;
+
+            int count = (int)min(subSamples.size(), (size_t)32);
+            for (int i = 0; i < count; ++i)
+            {
+                paramsDX.samples[i].posX  = subSamples[i].posX;
+                paramsDX.samples[i].posY  = subSamples[i].posY;
+                paramsDX.samples[i].scale = subSamples[i].scale;
+                paramsDX.samples[i]._pad  = 0.0f;
+            }
+
+            // 5) DXShaderExecution 설정 및 실행 (내부에서 Dispatch 및 CloseWaitAndReset 수행)
+            DXShaderExecution shaderExecution(
+                dxContext,
+                sDXShaderObjectCache[mDeviceIndex],
+                3);
+
+            shaderExecution.SetParamBuffer(&paramsDX, sizeof(paramsDX));
+            shaderExecution.SetUnorderedAccessView(destResource, (UINT)totalBytes);
+            shaderExecution.SetShaderResourceView(mDXTempBuffer.Get(), (UINT)totalBytes);
+
+            UINT dispatchX = (UINT)((width + 15) / 16);
+            UINT dispatchY = (UINT)((height + 15) / 16);
+
+            if (!shaderExecution.Execute(dispatchX, dispatchY))
+            {
+                return suiteError_Fail;
+            }
+
+            return suiteError_NoError;
+#else
+            return suiteError_NotImplemented;
+#endif
+        }
 
         return suiteError_NotImplemented;
     }
@@ -1263,6 +1486,13 @@ public:
         {
             clReleaseKernel(sOpenCLKernelCache[inIndex]);
             sOpenCLKernelCache[inIndex] = nullptr;
+        }
+#endif
+#if HAS_DIRECTX
+        if (inIndex < (csSDK_int32)sDXContextCache.size() && sDXContextCache[inIndex])
+        {
+            sDXShaderObjectCache[inIndex].reset();
+            sDXContextCache[inIndex].reset();
         }
 #endif
         return suiteError_NoError;
@@ -1288,6 +1518,10 @@ private:
     size_t           mCLParamBufferSize;
     cl_command_queue mCLCommandQueue;
     cl_kernel        mCLKernel;
+
+    // DirectX 12 buffer cache
+    Microsoft::WRL::ComPtr<ID3D12Resource> mDXTempBuffer;
+    size_t                                 mDXTempBufferSize = 0;
 };
 
 // Premiere Pro MPE GPU Filter entry point

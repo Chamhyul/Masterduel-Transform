@@ -19,9 +19,9 @@ TableString g_strs[StrID_NUMTYPES] = {
       "MasterDuel Transform" },
     { StrID_Description,
 #if defined(AE_OS_WIN) || defined(_WIN32)
-      "MasterDuel Transform v0.1.0 (Windows)\r개발자: 참혈\r유튜브: https://www.youtube.com/@참혈\rGitHub: https://github.com/Chamhyul/Masterduel-Transform"
+      "MasterDuel Transform v0.1.1 (Windows)\r개발자: 참혈\r유튜브: https://www.youtube.com/@참혈\rGitHub: https://github.com/Chamhyul/Masterduel-Transform"
 #else
-      "MasterDuel Transform v0.1.0 (macOS)\r개발자: 참혈\r유튜브: https://www.youtube.com/@참혈\rGitHub: https://github.com/Chamhyul/Masterduel-Transform"
+      "MasterDuel Transform v0.1.1 (macOS)\r개발자: 참혈\r유튜브: https://www.youtube.com/@참혈\rGitHub: https://github.com/Chamhyul/Masterduel-Transform"
 #endif
     },
 
