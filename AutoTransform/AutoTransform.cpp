@@ -10,9 +10,12 @@
 /*******************************************************************/
 
 #include "AutoTransform.h"
+#include "AutoTransform_Update.h"
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <mutex>
+#include <unordered_set>
 /* ================================================================
  *  About
  * ================================================================ */
@@ -27,10 +30,11 @@ static PF_Err About(
 
     suites.ANSICallbacksSuite1()->sprintf(
         out_data->return_msg,
-        "%s v%d.%d\r%s",
+        "%s v%d.%d.%d\r%s",
         STR(StrID_Name),
         MAJOR_VERSION,
         MINOR_VERSION,
+        BUG_VERSION,
         STR(StrID_Description));
 
     return PF_Err_NONE;
@@ -139,6 +143,25 @@ void GetDefaultPresets(PresetDataBlock* data)
     }
 }
 
+static PF_Handle CreateDefaultGridPresetHandle(PF_InData* in_data)
+{
+    PF_Handle h = PF_NEW_HANDLE(sizeof(GridUIPresetData));
+    if (!h) return NULL;
+
+    GridUIPresetData* p = reinterpret_cast<GridUIPresetData*>(PF_LOCK_HANDLE(h));
+    if (!p)
+    {
+        PF_DISPOSE_HANDLE(h);
+        return NULL;
+    }
+
+    p->magic = GRID_ARB_MAGIC;
+    p->version = GRID_ARB_VERSION;
+    GetDefaultPresets(&p->presetData);
+    PF_UNLOCK_HANDLE(h);
+    return h;
+}
+
 /* ================================================================
  *  ParamsSetup
  * ================================================================ */
@@ -151,6 +174,14 @@ static PF_Err ParamsSetup(
 {
     PF_Err      err = PF_Err_NONE;
     PF_ParamDef def;
+
+    /* 다운로드 안내는 렌더링 값이 아닌 UI 전용이며, 기본적으로 행 전체를 숨긴다. */
+    AEFX_CLR_STRUCT(def);
+    def.flags = PF_ParamFlag_CANNOT_TIME_VARY | PF_ParamFlag_CANNOT_INTERP;
+    def.ui_flags = PF_PUI_CONTROL | PF_PUI_INVISIBLE | PF_PUI_DONT_ERASE_CONTROL;
+    def.ui_width = UI_GRID_WIDTH;
+    def.ui_height = 26;
+    PF_ADD_CHECKBOX(STR(StrID_UpdateBanner_Name), "", FALSE, 0, UPDATE_BANNER_DISK_ID);
 
     /* ============================================================
      *  1. Transform Group (최상단, 기본 접힘)
@@ -374,13 +405,16 @@ static PF_Err ParamsSetup(
     def.ui_width = UI_GRID_WIDTH;
     def.ui_height = UI_GRID_HEIGHT;
 
+    PF_Handle defaultGridPresets = CreateDefaultGridPresetHandle(in_data);
+    if (!defaultGridPresets) return PF_Err_OUT_OF_MEMORY;
+
     PF_ADD_ARBITRARY2(
         STR(StrID_GridUI_Name),
         UI_GRID_WIDTH,
         UI_GRID_HEIGHT,
         PF_ParamFlag_SUPERVISE | PF_ParamFlag_CANNOT_TIME_VARY,
         PF_PUI_CONTROL | PF_PUI_DONT_ERASE_CONTROL,
-        0,
+        defaultGridPresets,
         GRID_UI_DISK_ID,
         GRID_ARB_REFCON);
 
@@ -801,8 +835,13 @@ static PF_Err UserChangedParam(
             double rawX = FIX_2_FLOAT(params[AT_EDITOR_POS]->u.td.x_value);
             double rawY = FIX_2_FLOAT(params[AT_EDITOR_POS]->u.td.y_value);
 
-            if (params[AT_GRID_UI] && params[AT_GRID_UI]->u.arb_d.value)
+            if (params[AT_GRID_UI])
             {
+                if (!params[AT_GRID_UI]->u.arb_d.value)
+                {
+                    params[AT_GRID_UI]->u.arb_d.value = CreateDefaultGridPresetHandle(in_data);
+                    if (!params[AT_GRID_UI]->u.arb_d.value) return PF_Err_OUT_OF_MEMORY;
+                }
                 PF_Handle h = params[AT_GRID_UI]->u.arb_d.value;
                 GridUIPresetData* p = reinterpret_cast<GridUIPresetData*>(PF_LOCK_HANDLE(h));
                 if (p)
@@ -1179,6 +1218,8 @@ static PF_Err DrawEvent(
     {
         return err;
     }
+    if (event_extra->effect_win.index != AT_GRID_UI &&
+        event_extra->effect_win.index != AT_UPDATE_BANNER) return err;
 
     DRAWBOT_Suites drawbotSuites;
     ERR(AEFX_AcquireDrawbotSuites(in_data, out_data, &drawbotSuites));
@@ -1213,13 +1254,23 @@ static PF_Err DrawEvent(
 
         if (!err && supplier_ref && surface_ref && font_ref)
         {
-            UIStateInfo uiState = GetUIStateInfo(params, in_data);
-
             float originX = (float)event_extra->effect_win.current_frame.left;
             float originY = (float)event_extra->effect_win.current_frame.top;
             float totalW  = (float)(event_extra->effect_win.current_frame.right - event_extra->effect_win.current_frame.left);
             float totalH  = (float)(event_extra->effect_win.current_frame.bottom - event_extra->effect_win.current_frame.top);
             if (totalW < 180.0f) totalW = (float)UI_GRID_WIDTH;
+
+            if (event_extra->effect_win.index == AT_UPDATE_BANNER)
+            {
+                DRAWBOT_RectF32 banner = {originX + 3.0f, originY + 2.0f,
+                                         totalW - 6.0f, totalH - 4.0f};
+                DrawSingleButton(&drawbotSuites, surface_ref, supplier_ref, font_ref,
+                                 banner, ButtonColorState::CustomBlue,
+                                 "Update available - GitHub");
+            }
+            else
+            {
+            UIStateInfo uiState = GetUIStateInfo(params, in_data);
 
             // 1. 호스트 패널 테마 배경색 취득 및 배경 채우기 (패널 일체화 투명화)
             DRAWBOT_ColorRGBA hostBgCol = { 0.15f, 0.15f, 0.15f, 1.0f };
@@ -1366,7 +1417,7 @@ static PF_Err DrawEvent(
 
                 drawbotSuites.supplier_suiteP->ReleaseObject(reinterpret_cast<DRAWBOT_ObjectRef>(customBrush));
             }
-
+            }
             drawbotSuites.supplier_suiteP->ReleaseObject(reinterpret_cast<DRAWBOT_ObjectRef>(font_ref));
         }
     }
@@ -1398,6 +1449,14 @@ static PF_Err DoClick(
     {
         return err;
     }
+
+    if (event_extra->effect_win.index == AT_UPDATE_BANNER)
+    {
+        if (AT_IsUpdateAvailable()) AT_OpenLatestReleasePage();
+        event_extra->evt_out_flags |= PF_EO_HANDLED_EVENT;
+        return err;
+    }
+    if (event_extra->effect_win.index != AT_GRID_UI) return err;
 
     AEGP_SuiteHandler suites(in_data->pica_basicP);
 
@@ -1574,11 +1633,45 @@ static PF_Err ChangeCursor(
     PF_LayerDef*   output,
     PF_EventExtra* event_extra)
 {
-    if (event_extra->effect_win.area == PF_EA_CONTROL)
+    if (event_extra->effect_win.area == PF_EA_CONTROL &&
+        (event_extra->effect_win.index == AT_GRID_UI ||
+         event_extra->effect_win.index == AT_UPDATE_BANNER))
     {
         event_extra->u.adjust_cursor.set_cursor = PF_Cursor_HAND;
     }
     return PF_Err_NONE;
+}
+
+static std::mutex s_updateBannerMutex;
+static std::unordered_set<PF_ProgPtr> s_updateBannerShown;
+
+static void RefreshUpdateBanner(PF_InData* in_data, PF_ParamDef* params[])
+{
+    if (!in_data || !in_data->pica_basicP || !params || !params[AT_UPDATE_BANNER]) return;
+    if (!AT_IsUpdateAvailable()) return;
+    {
+        std::lock_guard<std::mutex> lock(s_updateBannerMutex);
+        if (!s_updateBannerShown.insert(in_data->effect_ref).second) return;
+    }
+    PF_ParamDef banner = *params[AT_UPDATE_BANNER];
+    if (banner.ui_flags & PF_PUI_INVISIBLE)
+    {
+        banner.ui_flags &= ~PF_PUI_INVISIBLE;
+        AEGP_SuiteHandler suites(in_data->pica_basicP);
+        if (suites.ParamUtilsSuite3()->PF_UpdateParamUI(
+                in_data->effect_ref, AT_UPDATE_BANNER, &banner) != PF_Err_NONE)
+        {
+            std::lock_guard<std::mutex> lock(s_updateBannerMutex);
+            s_updateBannerShown.erase(in_data->effect_ref);
+        }
+    }
+}
+
+static void ForgetUpdateBanner(PF_InData* in_data)
+{
+    if (!in_data) return;
+    std::lock_guard<std::mutex> lock(s_updateBannerMutex);
+    s_updateBannerShown.erase(in_data->effect_ref);
 }
 
 /* ================================================================
@@ -1606,6 +1699,9 @@ static PF_Err HandleEvent(
         break;
     case PF_Event_ADJUST_CURSOR:
         err = ChangeCursor(in_data, out_data, params, output, extra);
+        break;
+    case PF_Event_IDLE:
+        RefreshUpdateBanner(in_data, params);
         break;
     default:
         break;
@@ -1637,23 +1733,9 @@ static PF_Err HandleArbitrary(
         }
         else
         {
-            PF_Handle h = PF_NEW_HANDLE(sizeof(GridUIPresetData));
-            if (h)
-            {
-                GridUIPresetData* p = reinterpret_cast<GridUIPresetData*>(PF_LOCK_HANDLE(h));
-                if (p)
-                {
-                    p->magic   = GRID_ARB_MAGIC;
-                    p->version = GRID_ARB_VERSION;
-                    GetDefaultPresets(&p->presetData);
-                    PF_UNLOCK_HANDLE(h);
-                }
-                *(extra->u.new_func_params.arbPH) = h;
-            }
-            else
-            {
-                err = PF_Err_OUT_OF_MEMORY;
-            }
+            PF_Handle h = CreateDefaultGridPresetHandle(in_data);
+            if (h) *(extra->u.new_func_params.arbPH) = h;
+            else err = PF_Err_OUT_OF_MEMORY;
         }
         break;
 
@@ -2194,6 +2276,9 @@ static PF_Err UpdateParamsUI(
     PF_Err err = PF_Err_NONE;
     AEGP_SuiteHandler suites(in_data->pica_basicP);
 
+    AT_StartUpdateCheck(MAJOR_VERSION, MINOR_VERSION, BUG_VERSION);
+    RefreshUpdateBanner(in_data, params);
+
     A_long clipW = params[AT_INPUT]->u.ld.width;
     A_long clipH = params[AT_INPUT]->u.ld.height;
     if (clipW <= 0) clipW = (in_data->width  > 0) ? in_data->width  : (A_long)PRESET_BASE_W;
@@ -2286,6 +2371,11 @@ PF_Err EffectMain(
 
         case PF_Cmd_PARAMS_SETUP:
             err = ParamsSetup(in_data, out_data, params, output);
+            break;
+
+        case PF_Cmd_SEQUENCE_SETUP:
+        case PF_Cmd_SEQUENCE_SETDOWN:
+            ForgetUpdateBanner(in_data);
             break;
 
         case PF_Cmd_UPDATE_PARAMS_UI:

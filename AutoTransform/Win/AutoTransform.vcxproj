@@ -70,7 +70,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;d3d12.lib;dxgi.lib;d3dcompiler.lib;winhttp.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\x64;$(CUDA_SDK_BASE_PATH)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/EXPORT:xGPUFilterEntry %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -98,7 +98,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;d3d12.lib;dxgi.lib;d3dcompiler.lib;winhttp.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\x64;$(CUDA_SDK_BASE_PATH)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/EXPORT:xGPUFilterEntry %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -110,6 +110,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\AutoTransform.h" />
+    <ClInclude Include="..\AutoTransform_Update.h" />
     <ClInclude Include="..\AutoTransform_Strings.h" />
     <ClInclude Include="..\DirectXUtils.h" />
     <ClInclude Include="..\AutoTransform_CSO.h" />
@@ -117,6 +118,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\AutoTransform.cpp" />
+    <ClCompile Include="..\AutoTransform_Update.cpp" />
+    <ClCompile Include="..\AutoTransform_Update_Win.cpp" />
     <ClCompile Include="..\AutoTransform_Strings.cpp" />
     <ClCompile Include="..\AutoTransform_GPU_Win.cpp" />
     <ClCompile Include="..\DirectXUtils.cpp" />

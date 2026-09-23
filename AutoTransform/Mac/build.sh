@@ -104,6 +104,8 @@ GPU_FLAGS=(
 )
 
 clang++ "${AE_FLAGS[@]}"  -c "$PROJ_DIR/AutoTransform.cpp"             -o "$OBJ_DIR/AutoTransform.o"
+clang++ "${AE_FLAGS[@]}"  -c "$PROJ_DIR/AutoTransform_Update.cpp"      -o "$OBJ_DIR/AutoTransform_Update.o"
+clang++ "${AE_FLAGS[@]}"  -c "$PROJ_DIR/AutoTransform_Update_Mac.mm"   -o "$OBJ_DIR/AutoTransform_Update_Mac.o"
 clang++ "${AE_FLAGS[@]}"  -c "$PROJ_DIR/AutoTransform_Strings.cpp"     -o "$OBJ_DIR/AutoTransform_Strings.o"
 clang++ "${AE_FLAGS[@]}"  -c "$AE_SDK_DIR/Util/AEGP_SuiteHandler.cpp" -o "$OBJ_DIR/AEGP_SuiteHandler.o"
 clang++ "${AE_FLAGS[@]}"  -c "$AE_SDK_DIR/Util/MissingSuiteError.cpp" -o "$OBJ_DIR/MissingSuiteError.o"
@@ -124,6 +126,8 @@ clang++ \
     -framework Metal \
     -o "$MACOS_DIR/AutoTransform" \
     "$OBJ_DIR/AutoTransform.o" \
+    "$OBJ_DIR/AutoTransform_Update.o" \
+    "$OBJ_DIR/AutoTransform_Update_Mac.o" \
     "$OBJ_DIR/AutoTransform_Strings.o" \
     "$OBJ_DIR/AutoTransform_GPU.o" \
     "$OBJ_DIR/AEGP_SuiteHandler.o" \

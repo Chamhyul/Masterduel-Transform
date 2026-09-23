@@ -1315,17 +1315,21 @@ public:
             if (clErr != CL_SUCCESS) return suiteError_Fail;
 
             // 2) 파라미터 및 샘플 데이터 복사
-            clErr = clEnqueueWriteBuffer(mCLCommandQueue, mCLParamBuffer, CL_FALSE, 0, sizeof(AutoTransformParams), &params, 0, nullptr, nullptr);
+            clErr = clEnqueueWriteBuffer(mCLCommandQueue, mCLParamBuffer, CL_TRUE, 0, sizeof(AutoTransformParams), &params, 0, nullptr, nullptr);
             if (clErr != CL_SUCCESS) return suiteError_Fail;
 
-            clErr = clEnqueueWriteBuffer(mCLCommandQueue, mCLSampleBuffer, CL_FALSE, 0, sampleBytes, subSamples.data(), 0, nullptr, nullptr);
+            clErr = clEnqueueWriteBuffer(mCLCommandQueue, mCLSampleBuffer, CL_TRUE, 0, sampleBytes, subSamples.data(), 0, nullptr, nullptr);
             if (clErr != CL_SUCCESS) return suiteError_Fail;
 
             // 3) 커널 파라미터 바인딩
-            clSetKernelArg(mCLKernel, 0, sizeof(cl_mem), &mCLTempBuffer);
-            clSetKernelArg(mCLKernel, 1, sizeof(cl_mem), &destCLMem);
-            clSetKernelArg(mCLKernel, 2, sizeof(cl_mem), &mCLParamBuffer);
-            clSetKernelArg(mCLKernel, 3, sizeof(cl_mem), &mCLSampleBuffer);
+            clErr = clSetKernelArg(mCLKernel, 0, sizeof(cl_mem), &mCLTempBuffer);
+            if (clErr != CL_SUCCESS) return suiteError_Fail;
+            clErr = clSetKernelArg(mCLKernel, 1, sizeof(cl_mem), &destCLMem);
+            if (clErr != CL_SUCCESS) return suiteError_Fail;
+            clErr = clSetKernelArg(mCLKernel, 2, sizeof(cl_mem), &mCLParamBuffer);
+            if (clErr != CL_SUCCESS) return suiteError_Fail;
+            clErr = clSetKernelArg(mCLKernel, 3, sizeof(cl_mem), &mCLSampleBuffer);
+            if (clErr != CL_SUCCESS) return suiteError_Fail;
 
             size_t localWorkSize[2] = { 16, 16 };
             size_t globalWorkSize[2] = {

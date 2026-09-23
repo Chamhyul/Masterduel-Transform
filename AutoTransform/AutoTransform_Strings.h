@@ -11,6 +11,7 @@ typedef enum
     StrID_NONE,
     StrID_Name,
     StrID_Description,
+    StrID_UpdateBanner_Name,
 
     /* ---- 신규: Preset UI & Transform ---- */
     StrID_Topic_Transform,

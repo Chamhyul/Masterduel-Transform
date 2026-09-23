@@ -11,8 +11,8 @@
 #include "AutoTransform.rcp"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     0,1,1,0
-PRODUCTVERSION  0,1,1,0
+FILEVERSION     0,1,2,0
+PRODUCTVERSION  0,1,2,0
 FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
 #ifdef _DEBUG
 FILEFLAGS       VS_FF_DEBUG
@@ -29,23 +29,23 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "참혈"
             VALUE "FileDescription",  "MasterDuel Transform Plugin for Premiere Pro"
-            VALUE "FileVersion",      "0.1.1.0"
+            VALUE "FileVersion",      "0.1.2.0"
             VALUE "InternalName",     "AutoTransform"
             VALUE "LegalCopyright",   "Copyright (C) 2026 참혈. All rights reserved."
             VALUE "OriginalFilename", "AutoTransform.aex"
             VALUE "ProductName",      "MasterDuel Transform"
-            VALUE "ProductVersion",   "0.1.1.0"
+            VALUE "ProductVersion",   "0.1.2.0"
         END
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName",      "참혈"
             VALUE "FileDescription",  "MasterDuel Transform Plugin for Premiere Pro"
-            VALUE "FileVersion",      "0.1.1.0"
+            VALUE "FileVersion",      "0.1.2.0"
             VALUE "InternalName",     "AutoTransform"
             VALUE "LegalCopyright",   "Copyright (C) 2026 참혈. All rights reserved."
             VALUE "OriginalFilename", "AutoTransform.aex"
             VALUE "ProductName",      "MasterDuel Transform"
-            VALUE "ProductVersion",   "0.1.1.0"
+            VALUE "ProductVersion",   "0.1.2.0"
         END
     END
     BLOCK "VarFileInfo"

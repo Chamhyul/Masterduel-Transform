@@ -1,6 +1,6 @@
-$csoPath = "AutoTransform\AutoTransform.cso"
-$rsPath  = "AutoTransform\AutoTransform.rs"
-$outPath = "AutoTransform\AutoTransform_CSO.h"
+$csoPath = Join-Path $PSScriptRoot "AutoTransform.cso"
+$rsPath  = Join-Path $PSScriptRoot "AutoTransform.rs"
+$outPath = Join-Path $PSScriptRoot "AutoTransform_CSO.h"
 
 $csoBytes = [System.IO.File]::ReadAllBytes($csoPath)
 $rsBytes  = [System.IO.File]::ReadAllBytes($rsPath)

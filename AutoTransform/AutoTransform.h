@@ -51,7 +51,7 @@ typedef unsigned short PixelType;
 
     #define MAJOR_VERSION   0
     #define MINOR_VERSION   1
-    #define BUG_VERSION     1
+    #define BUG_VERSION     2
     #define STAGE_VERSION   PF_Stage_DEVELOP
     #define BUILD_VERSION   1
 
@@ -63,13 +63,15 @@ enum
 {
     AT_INPUT = 0,           // Input layer (always index 0)
 
+    AT_UPDATE_BANNER,        // 1  새 릴리스가 있을 때만 표시
+
     // --- 1. Transform Group (최상단, 기본 접힘) ---
-    AT_GROUP_TRANSFORM_START, // 1  "Transform" 그룹 시작
-    AT_START_POSITION,        // 2  Start Position
-    AT_END_POSITION,          // 3  End Position
-    AT_START_SCALE,           // 4  Start Scale
-    AT_END_SCALE,             // 5  End Scale
-    AT_GROUP_TRANSFORM_END,   // 6  Transform 그룹 끝
+    AT_GROUP_TRANSFORM_START, // "Transform" 그룹 시작
+    AT_START_POSITION,        // Start Position
+    AT_END_POSITION,          // End Position
+    AT_START_SCALE,           // Start Scale
+    AT_END_SCALE,             // End Scale
+    AT_GROUP_TRANSFORM_END,   // Transform 그룹 끝
 
     // --- 2. Timing & Easing Group ---
     AT_GROUP_TIMING_START,  // 7
@@ -144,7 +146,8 @@ enum
     PRESET_CODE_DISK_ID                 = 28,
     GROUP_PRESET_SETTINGS_START_DISK_ID = 29,
     GROUP_PRESET_SETTINGS_END_DISK_ID   = 30,
-    MODIFIER_OFFSET_MULT_DISK_ID        = 31
+    MODIFIER_OFFSET_MULT_DISK_ID        = 31,
+    UPDATE_BANNER_DISK_ID              = 32
 };
 
 /* ================================================================
