@@ -1,35 +1,44 @@
 # Premiere Pro Auto Transform 플러그인 UI 및 파라미터 사양
 
-현재 렌더링 파이프라인 교체 및 모션 블러를 구현 중인 에이전트에게 전달하는 UI 및 파라미터 연동 가이드라인입니다. 
-사용자의 키보드 매크로 호환성 및 Premiere Pro 호스트의 특수성을 고려하여 아래 명시된 UI 구조와 규칙을 100% 준수하여 구현해야 합니다.
-
----
+현재 구현과 유지보수 시 지켜야 할 UI 및 파라미터 연동 규칙입니다.
 
 ## 1. Effect Controls 패널 전체 UI 배치 구조 (순서 엄수)
 
-키보드 매크로 호환성을 위해 **하단 4개 항목(Start/End Position, Start/End Scale)은 어떠한 그룹에도 포함되지 않으며, 반드시 최하단에 순서대로 영구 고정**되어야 합니다.
+**Transform 그룹을 일반 컨트롤 최상단에 배치한 현재 상태가 정상입니다.** Start/End Position 및 Start/End Scale을 그룹 밖 최하단에 고정하던 이전 규칙은 폐기합니다. 업데이트 알림은 새 버전이 있을 때만 Transform 위에 표시합니다.
 
 ```text
-▾ Auto Transform
-▾ Timing & Easing           (접이식 토글 그룹: PF_ADD_TOPIC)
-    Duration (frames)       10 frames (기본값: 10.0)
-    Easing Preset           [ Linear ▾ ] (드롭다운 기본값: Linear)
-                            (선택지: Linear | Ease In | Ease Out | Ease In & Out | Custom)
-    Ease In (%)             0% (기본값: 0.0, 범위: 0 ~ 100%)
-    Ease Out (%)            0% (기본값: 0.0, 범위: 0 ~ 100%)
-(토글 그룹 종료: PF_END_TOPIC)
-
-▾ Motion Blur               (접이식 토글 그룹: PF_ADD_TOPIC)
-    Shutter Angle           0.0° (기본값: 0.0° = Off, 범위: 0.0° ~ 720.0°)
-    Samples                 8 (기본값: 8, 범위: 2 ~ 32)
-(토글 그룹 종료: PF_END_TOPIC)
-
-────────────────────────────────────────────────────────
-Start Position              (그룹 밖 최하단 고정, 기본 50% = 4K: 1920, 1080 / FHD: 960, 540)
-End Position                (그룹 밖 최하단 고정, 기본 50% = 4K: 1920, 1080 / FHD: 960, 540)
-Start Scale                 100% (그룹 밖 최하단 고정)
-End Scale                   100% (그룹 밖 최하단 고정)
+▾ MasterDuel Transform
+업데이트 알림              (새 버전이 있을 때만 표시)
+▸ Transform                (기본 접힘)
+    Start Position         기본 50% (호스트가 클립 중심 픽셀 좌표로 변환)
+    End Position           기본 50%
+    Start Scale            100%
+    End Scale              100%
+▾ Timing & Easing
+    Duration (frames)      10
+    Easing Preset          Linear | Ease In | Ease Out | Ease In & Out | Custom
+    Ease In (%)            0% (0~100%)
+    Ease Out (%)           0% (0~100%)
+▾ Motion Blur
+    Shutter Angle          0° (0~720°, 0이면 Off)
+    Samples                8 (2~32)
+▸ Preset Settings          (기본 접힘)
+    Editor Preset
+    Editor Position
+    Editor Scale
+    Modifier Offset Mult
+Buttons
+Preset Code
+Move Mode
 ```
+
+### 플랫폼별 SDK 환경
+
+- MacBook 개발 환경에는 **macOS용 Adobe SDK**가 있고, Windows 개발 환경에는 **Windows용 Adobe SDK**가 있습니다. 현재 운영체제용 SDK로 빌드하며, 다른 플랫폼 SDK가 없다는 이유로 환경이 불완전하다고 판단하지 마십시오.
+- SDK는 Git에 포함하지 않고 `local_sdk/`에 둡니다.
+- macOS: `AdobeAfterEffectsSDK_26.5_MacOS/Examples`, `Premiere Pro 26.0 C++ SDK/Examples`.
+- Windows: `AfterEffectsSDK_26.5_win/Examples`, `Premiere Pro 26.0 C++ SDK/Examples`.
+- 현재 macOS 배포 대상은 **Apple Silicon (arm64), macOS 11.0 이상**입니다. Intel Mac은 지원 대상이 아닙니다.
 
 ---
 
@@ -51,6 +60,8 @@ End Scale                   100% (그룹 밖 최하단 고정)
 - `SHUTTER_ANGLE_DISK_ID = 12`
 - `SAMPLES_DISK_ID = 13`
 - `GROUP_BLUR_END_DISK_ID = 14`
+
+추가된 숨김 렌더링 상태 파라미터는 기존 파라미터 뒤에만 붙입니다. `START_MASK_MODE_DISK_ID = 33`, `END_MASK_MODE_DISK_ID = 34`이며 값 `0/1/2`는 각각 전체/X1(`<`)/X2(`>`), `3`은 구버전 프로젝트에서 아직 동기화되지 않은 상태입니다. 기존 Disk ID와 UI 파라미터 인덱스를 재배열하지 마십시오.
 
 ---
 
@@ -159,6 +170,18 @@ AcquireNodeForTime(inSequenceTime)
 ## 6. [지속 수정 및 의사결정 기록 (Decision & Change Log)]
 
 모든 에이전트는 타이밍 로직 및 파이프라인 수정 시 아래 로그에 작업 내역, 결과, 교훈을 반드시 기록해야 합니다.
+
+### [2026-09-25] 현재 UI 및 CPU 픽셀 형식 정합성
+- Transform 최상단 그룹 배치를 정상 사양으로 확정하고, 과거 최하단 고정 규칙을 폐기.
+- MacBook에는 macOS용 SDK, Windows에는 Windows용 SDK를 두는 개발 환경을 명시. macOS 배포 대상은 Apple Silicon.
+- Premiere CPU 렌더링은 등록 형식인 `BGRA_4444_32f` / `VUYA_4444_32f`를 입력·출력에서 확인하고, 채널당 float 및 픽셀당 16바이트로 처리. AE ARGB 픽셀 구조로 해석하거나 8비트로 반올림하지 않음.
+- CPU float 보간·블러는 HDR/음수 채널과 알파를 보존하며, 이미지 밖 샘플은 GPU와 동일하게 투명 처리. 기존 시간 계산과 GPU 경로는 변경하지 않음.
+- 당시 Windows GPU 및 Metal GPU 모두 좌우 분할 판정에 `GetDefaultPresets`를 사용했음. 위치·배율은 현재 파라미터를 읽으므로, 이를 모든 변환 값이 기본 프리셋으로 고정되는 문제와 혼동하지 말 것. 사용자는 Windows의 설정 프리셋 동작을 확인했지만 기본 테이블 참조가 남긴 잠재적인 불일치는 별도로 수정해야 했음.
+
+### [2026-09-25] GPU 좌우 분할 모드 명시적 저장
+- CPU UI에서 사용자 프리셋으로 Start/End 위치·배율을 판정하고, 결과를 숨김 정수 파라미터 `AT_START_MASK_MODE` / `AT_END_MASK_MODE`에 저장. GPU 렌더러는 이 값을 사용하므로 사용자 프리셋 좌표가 기본값과 달라도 모드가 유지됨.
+- 새 파라미터가 아직 없는 구버전 저장 프로젝트에서는 End의 `Preset Code`로 모드를 우선 판정하고, 나머지는 기존 기본 프리셋 비교를 임시 호환 경로로 사용. 구버전에서 사용자 수정 프리셋으로 만든 Start 좌우 모드까지 완전히 복원하려면 GPU가 Arbitrary Data를 안전하게 읽는 방법을 실측 검증하거나 프로젝트를 사용자 변경 이벤트로 다시 저장해야 함. UI 업데이트 콜백에서는 Adobe SDK가 값 변경 플래그를 금지하므로 마이그레이션 값을 쓰지 않음.
+- macOS arm64 빌드로 문법·링크 확인. Premiere 호스트 동작 및 Windows GPU 빌드는 해당 환경에서 별도 검증 필요.
 
 ### [2026-09-19 15:30]
 - **작업 내용**: Film Impact 디스어셈블리 분석 후 `EffectNode::RuntimeInstanceID` 및 세그먼트 매칭 코드 구현 시도.
@@ -276,8 +299,6 @@ WelcomeLabel2=Adobe Premiere Pro용 키프레임 없는 자동 트랜스폼 플�
   gh release upload v0.1.0 "MasterDuel Transform v0.1.0 (Windows).exe"
   ```
 * 릴리즈 제목 및 노트를 `MasterDuel Transform v0.1.0 (macOS 및 Windows)`로 갱신하여 멀티 플랫폼 배포를 완성합니다.
-
-
 
 
 

@@ -1109,59 +1109,72 @@ public:
             double offsetMult = GetParam(AT_MODIFIER_OFFSET_MULT, tTime).mFloat64;
             if (offsetMult < 0.0) offsetMult = 0.0;
 
-            PresetDataBlock defaultPresets;
-            GetDefaultPresets(&defaultPresets);
-
-            MatchResult startMatch = FindMatchingPresetExtPixel(
-                &defaultPresets,
-                startPosX,
-                startPosY,
-                startScale * 100.0,
-                width,
-                height,
-                offsetMult);
-
-            MatchResult endMatch = FindMatchingPresetExtPixel(
-                &defaultPresets,
-                endPosX,
-                endPosY,
-                endScale * 100.0,
-                width,
-                height,
-                offsetMult);
+            PrParam startMaskParam = {};
+            PrParam endMaskParam = {};
+            int startMode = 3, endMode = 3;
+            if (mVideoSegmentSuite->GetParam(mNodeID, AT_START_MASK_MODE - 1,
+                    tTime, &startMaskParam) == suiteError_NoError &&
+                startMaskParam.mType == kPrParamType_Int32)
+                startMode = startMaskParam.mInt32;
+            if (mVideoSegmentSuite->GetParam(mNodeID, AT_END_MASK_MODE - 1,
+                    tTime, &endMaskParam) == suiteError_NoError &&
+                endMaskParam.mType == kPrParamType_Int32)
+                endMode = endMaskParam.mInt32;
+            // Older saved effects have no synchronized mask metadata yet.
+            if (startMode < 0 || startMode > 2 || endMode < 0 || endMode > 2)
+            {
+                PresetDataBlock defaultPresets;
+                GetDefaultPresets(&defaultPresets);
+                // Legacy Preset Code records the End mode even for edited presets.
+                if (endMode < 0 || endMode > 2)
+                {
+                    const int code = GetParam(AT_PRESET_CODE, tTime).mInt32;
+                    if (code >= 1 && code <= AT_NUM_PRESETS) endMode = (int)PresetModifier::X1;
+                    else if (code >= 101 && code <= 100 + AT_NUM_PRESETS) endMode = (int)PresetModifier::None;
+                    else if (code >= 201 && code <= 200 + AT_NUM_PRESETS) endMode = (int)PresetModifier::X2;
+                }
+                if (startMode < 0 || startMode > 2)
+                    startMode = (int)FindMatchingPresetExtPixel(&defaultPresets,
+                        startPosX, startPosY, startScale * 100.0,
+                        width, height, offsetMult).modifier;
+                if (endMode < 0 || endMode > 2)
+                    endMode = (int)FindMatchingPresetExtPixel(&defaultPresets,
+                        endPosX, endPosY, endScale * 100.0,
+                        width, height, offsetMult).modifier;
+            }
 
             float halfW = (float)width * 0.5f;
 
-            float startL = (startMatch.modifier == PresetModifier::X2) ? halfW : 0.0f;
-            float startR = (startMatch.modifier == PresetModifier::X1) ? halfW : (float)width;
+            float startL = (startMode == (int)PresetModifier::X2) ? halfW : 0.0f;
+            float startR = (startMode == (int)PresetModifier::X1) ? halfW : (float)width;
 
-            float endL   = (endMatch.modifier == PresetModifier::X2)   ? halfW : 0.0f;
-            float endR   = (endMatch.modifier == PresetModifier::X1)   ? halfW : (float)width;
+            float endL   = (endMode == (int)PresetModifier::X2)   ? halfW : 0.0f;
+            float endR   = (endMode == (int)PresetModifier::X1)   ? halfW : (float)width;
 
             params.cropLeft  = startL + (endL - startL) * (float)mainEasedT;
             params.cropRight = startR + (endR - startR) * (float)mainEasedT;
 
             // 전체에서 좌우 모드로 가려질 때 4px 여유 마진으로 시작해서 0px로 수렴 (최종 0px 오버랩)
-            if (startMatch.modifier == PresetModifier::None && endMatch.modifier != PresetModifier::None)
+            if (startMode == (int)PresetModifier::None && endMode != (int)PresetModifier::None)
             {
                 float bleed = 4.0f * (1.0f - (float)mainEasedT);
-                if (endMatch.modifier == PresetModifier::X1)
+                if (endMode == (int)PresetModifier::X1)
                 {
                     params.cropRight += bleed;
                 }
-                else if (endMatch.modifier == PresetModifier::X2)
+                else if (endMode == (int)PresetModifier::X2)
                 {
                     params.cropLeft -= bleed;
                 }
             }
-            else if (startMatch.modifier != PresetModifier::None && endMatch.modifier == PresetModifier::None)
+            else if (startMode != (int)PresetModifier::None && endMode == (int)PresetModifier::None)
             {
                 float bleed = 4.0f * (float)mainEasedT;
-                if (startMatch.modifier == PresetModifier::X1)
+                if (startMode == (int)PresetModifier::X1)
                 {
                     params.cropRight += bleed;
                 }
-                else if (startMatch.modifier == PresetModifier::X2)
+                else if (startMode == (int)PresetModifier::X2)
                 {
                     params.cropLeft -= bleed;
                 }

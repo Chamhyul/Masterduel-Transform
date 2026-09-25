@@ -11,6 +11,7 @@
 
 #include "AutoTransform.h"
 #include "AutoTransform_Update.h"
+#include "AutoTransform_CPU.h"
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -453,6 +454,18 @@ static PF_Err ParamsSetup(
         0,
         MOVE_MODE_DISK_ID);
 
+    // Persist crop modes in scalar parameters the GPU filter can read.
+    // 3 means a project saved before these parameters were introduced.
+    AEFX_CLR_STRUCT(def);
+    def.flags = PF_ParamFlag_CANNOT_TIME_VARY | PF_ParamFlag_CANNOT_INTERP;
+    def.ui_flags = PF_PUI_INVISIBLE;
+    PF_ADD_SLIDER("Start Mask Mode", 0, 3, 0, 3, 3, START_MASK_MODE_DISK_ID);
+
+    AEFX_CLR_STRUCT(def);
+    def.flags = PF_ParamFlag_CANNOT_TIME_VARY | PF_ParamFlag_CANNOT_INTERP;
+    def.ui_flags = PF_PUI_INVISIBLE;
+    PF_ADD_SLIDER("End Mask Mode", 0, 3, 0, 3, 3, END_MASK_MODE_DISK_ID);
+
     out_data->num_params = AT_NUM_PARAMS;
 
     return err;
@@ -582,6 +595,38 @@ static int FindMatchingPreset(
     return (m.presetId > 0 && m.modifier == PresetModifier::None) ? (m.presetId - 1) : -1;
 }
 
+static void SyncMaskModes(PF_InData* in_data, PF_ParamDef* params[])
+{
+    if (!in_data || !params || !params[AT_START_MASK_MODE] || !params[AT_END_MASK_MODE]) return;
+
+    PresetDataBlock presets;
+    GetEffectPresetData(in_data, params, &presets);
+    A_long width = params[AT_INPUT]->u.ld.width;
+    A_long height = params[AT_INPUT]->u.ld.height;
+    if (width <= 0) width = in_data->width > 0 ? in_data->width : (A_long)PRESET_BASE_W;
+    if (height <= 0) height = in_data->height > 0 ? in_data->height : (A_long)PRESET_BASE_H;
+    double offset = params[AT_MODIFIER_OFFSET_MULT]->u.fs_d.value;
+    if (offset < 0.0) offset = 0.0;
+
+    const int positions[] = { AT_START_POSITION, AT_END_POSITION };
+    const int scales[] = { AT_START_SCALE, AT_END_SCALE };
+    const int modes[] = { AT_START_MASK_MODE, AT_END_MASK_MODE };
+    AEGP_SuiteHandler suites(in_data->pica_basicP);
+    for (int i = 0; i < 2; ++i) {
+        const MatchResult match = FindMatchingPresetExt(&presets,
+            params[positions[i]]->u.td.x_value,
+            params[positions[i]]->u.td.y_value,
+            params[scales[i]]->u.fs_d.value, width, height, offset);
+        const A_long mode = static_cast<A_long>(match.modifier);
+        if (params[modes[i]]->u.sd.value != mode) {
+            params[modes[i]]->u.sd.value = mode;
+            params[modes[i]]->uu.change_flags = PF_ChangeFlag_CHANGED_VALUE;
+            suites.ParamUtilsSuite3()->PF_UpdateParamUI(
+                in_data->effect_ref, modes[i], params[modes[i]]);
+        }
+    }
+}
+
 /* ================================================================
  *  내부 UI 업데이트 재진입 방지 가드
  * ================================================================ */
@@ -681,6 +726,7 @@ static PF_Err UserChangedParam(
 
         if (code == s_lastProgrammedPresetCode)
         {
+            SyncMaskModes(in_data, params);
             return PF_Err_NONE;
         }
         s_lastProgrammedPresetCode = code;
@@ -919,6 +965,7 @@ static PF_Err UserChangedParam(
         }
     }
 
+    SyncMaskModes(in_data, params);
     return err;
 }
 
@@ -1619,6 +1666,7 @@ static PF_Err DoClick(
         out_data->out_flags |= PF_OutFlag_REFRESH_UI | PF_OutFlag_FORCE_RERENDER;
     }
 
+    SyncMaskModes(in_data, params);
     return err;
 }
 
@@ -1917,23 +1965,18 @@ static inline PF_Pixel8 SampleBilinear8(
  *  Multi-threaded Pixel Processing Function
  * ================================================================ */
 
-struct TransformSample8
-{
-    PF_FpLong posX;
-    PF_FpLong posY;
-    PF_FpLong scale;
-};
+using TransformSample = ATCPU::TransformSample;
 
-typedef struct TransformInfo8
+typedef struct TransformInfo
 {
     const PF_EffectWorld* src;
     PF_FpLong             cx;
     PF_FpLong             cy;
     int                   numSamples;
-    TransformSample8      samples[32];
+    TransformSample       samples[32];
     PF_FpLong             cropLeft;
     PF_FpLong             cropRight;
-} TransformInfo8;
+} TransformInfo;
 
 static PF_Err AutoTransformPixelFunc8(
     void*      refcon,
@@ -1942,7 +1985,7 @@ static PF_Err AutoTransformPixelFunc8(
     PF_Pixel8* inP,
     PF_Pixel8* outP)
 {
-    TransformInfo8* tiP = reinterpret_cast<TransformInfo8*>(refcon);
+    TransformInfo* tiP = reinterpret_cast<TransformInfo*>(refcon);
     if (!tiP) return PF_Err_BAD_CALLBACK_PARAM;
 
     // 가시 영역([cropLeft, cropRight)) 밖인 경우 완전 투명 처리
@@ -1985,8 +2028,34 @@ static PF_Err AutoTransformPixelFunc8(
 }
 
 /* ================================================================
- *  Render (기존 로직 완전 보존 — 변경 없음)
+ *  Render (시간 계산 유지, Premiere CPU는 BGRA/VUYA 32f 처리)
  * ================================================================ */
+
+struct TransformFloatRowContext
+{
+    const TransformInfo* transform;
+    PF_EffectWorld* output;
+    PF_InData* inData;
+};
+
+static PF_Err RenderFloatRow(void* refcon, A_long threadIndex, A_long y, A_long)
+{
+    const auto& context = *static_cast<TransformFloatRowContext*>(refcon);
+    if (threadIndex == 0) {
+        PF_Err err = PF_ABORT(context.inData);
+        if (err) return err;
+    }
+    const auto& ti = *context.transform;
+    auto* row = reinterpret_cast<ATCPU::Pixel32f*>(
+        reinterpret_cast<char*>(context.output->data) +
+        static_cast<std::ptrdiff_t>(y) * context.output->rowbytes);
+    for (A_long x = 0; x < context.output->width; ++x) {
+        row[x] = ATCPU::TransformPixel(ti.src->data, ti.src->rowbytes,
+            ti.src->width, ti.src->height, ti.cx, ti.cy, ti.samples,
+            ti.numSamples, ti.cropLeft, ti.cropRight, x, y);
+    }
+    return PF_Err_NONE;
+}
 
 static PF_Err Render(
     PF_InData*   in_data,
@@ -1997,6 +2066,24 @@ static PF_Err Render(
     PF_Err err = PF_Err_NONE;
 
     PF_EffectWorld* input = &params[AT_INPUT]->u.ld;
+
+    // AE's PF_PixelFloat is ARGB; Premiere's advertised formats are BGRA/VUYA.
+    // Validate both worlds before using the explicit 16-byte float row renderer.
+    const bool premiere = in_data->appl_id == 'PrMr';
+    if (premiere)
+    {
+        AEFX_SuiteScoper<PF_PixelFormatSuite1> pixelFormatSuite(
+            in_data, kPFPixelFormatSuite, kPFPixelFormatSuiteVersion1, out_data);
+        PrPixelFormat sourceFormat = PrPixelFormat_Invalid;
+        PrPixelFormat destinationFormat = PrPixelFormat_Invalid;
+        ERR(pixelFormatSuite->GetPixelFormat(input, &sourceFormat));
+        ERR(pixelFormatSuite->GetPixelFormat(output, &destinationFormat));
+        if (err) return err;
+        if (sourceFormat != destinationFormat ||
+            (sourceFormat != PrPixelFormat_BGRA_4444_32f &&
+             sourceFormat != PrPixelFormat_VUYA_4444_32f))
+            return PF_Err_BAD_CALLBACK_PARAM;
+    }
 
     A_long width  = input->width;
     A_long height = input->height;
@@ -2139,7 +2226,7 @@ static PF_Err Render(
     if (samplesCount < SAMPLES_MIN) samplesCount = SAMPLES_MIN;
     if (samplesCount > SAMPLES_MAX) samplesCount = SAMPLES_MAX;
 
-    TransformInfo8 ti;
+    TransformInfo ti;
     ti.src = input;
     ti.cx  = (PF_FpLong)width  / 2.0;
     ti.cy  = (PF_FpLong)height / 2.0;
@@ -2248,6 +2335,12 @@ static PF_Err Render(
     if (ti.cropRight > (PF_FpLong)width) ti.cropRight = (PF_FpLong)width;
 
     AEGP_SuiteHandler suites(in_data->pica_basicP);
+    if (premiere)
+    {
+        TransformFloatRowContext context = { &ti, output, in_data };
+        return suites.Iterate8Suite2()->iterate_generic(
+            output->height, &context, RenderFloatRow);
+    }
     A_long linesL = output->extent_hint.bottom - output->extent_hint.top;
 
     ERR(suites.Iterate8Suite2()->iterate(

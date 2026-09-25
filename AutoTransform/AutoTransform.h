@@ -100,7 +100,10 @@ enum
     AT_PRESET_CODE,         // 24 Preset Code (0 < 100 > 200)
     AT_MOVE_MODE,           // 25 Move Mode 체크박스
 
-    AT_NUM_PARAMS           // 26
+    AT_START_MASK_MODE,     // 26 hidden GPU mask state
+    AT_END_MASK_MODE,       // 27 hidden GPU mask state
+
+    AT_NUM_PARAMS           // 28
 };
 
 /* ================================================================
@@ -147,7 +150,9 @@ enum
     GROUP_PRESET_SETTINGS_START_DISK_ID = 29,
     GROUP_PRESET_SETTINGS_END_DISK_ID   = 30,
     MODIFIER_OFFSET_MULT_DISK_ID        = 31,
-    UPDATE_BANNER_DISK_ID              = 32
+    UPDATE_BANNER_DISK_ID              = 32,
+    START_MASK_MODE_DISK_ID            = 33,
+    END_MASK_MODE_DISK_ID              = 34
 };
 
 /* ================================================================

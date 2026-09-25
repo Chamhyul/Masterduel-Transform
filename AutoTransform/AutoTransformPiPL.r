@@ -49,7 +49,7 @@ resource 'PiPL' (16000) {
 		},
 		/* [10] */
 		AE_Effect_Global_OutFlags {
-			0x8044
+			0x208044	/* 0x8044 | PF_OutFlag_I_AM_OBSOLETE: hide from AE Effects menu */
 		},
 		AE_Effect_Global_OutFlags_2 {
 			0x08
