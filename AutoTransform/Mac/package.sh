@@ -8,8 +8,8 @@ PROJ_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$PROJ_DIR/build"
 PLUGIN_BUNDLE="$BUILD_DIR/AutoTransform.plugin"
 ROOT_DIR="$(cd "$PROJ_DIR/.." && pwd)"
-VERSION="0.1.2"
-OUTPUT_PKG="$ROOT_DIR/macOS_MD_Transform.v${VERSION}.pkg"
+VERSION="0.1.3"
+OUTPUT_PKG="${OUTPUT_PKG:-$ROOT_DIR/macOS_MD_Transform.v${VERSION}.pkg}"
 
 echo "=== Packaging MasterDuel Transform v${VERSION} ==="
 echo "Bundle: $PLUGIN_BUNDLE"
@@ -71,7 +71,7 @@ cat << EOF > "$WORKDIR/distribution.xml"
     <title>MasterDuel Transform v${VERSION} (macOS 전용)</title>
     <welcome file="welcome.html" mime-type="text/html"/>
     <license file="license.txt" mime-type="text/plain"/>
-    <options customize="never" require-scripts="false" hostArchitectures="arm64,x86_64"/>
+    <options customize="never" require-scripts="false" hostArchitectures="arm64"/>
     <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
     <choices-outline>
         <line choice="default">

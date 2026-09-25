@@ -461,6 +461,7 @@ static bool ExtractFromAdjustmentNode(
             char siType[256] = {0};
             segmentSuite->GetNodeInfo(siID, siType, &hash, &flags);
 
+
             // ClipNode 발견 시 트랜지션 길이 조회 및 오프셋 보존
             if (strstr(siType, "Clip") != nullptr)
             {
@@ -502,15 +503,72 @@ static bool ExtractFromAdjustmentNode(
 }
 
 // 조정 레이어(RenderableNode_AdjustmentImpl 또는 전환 노드)에서 InPoint, 트랜지션 길이, 레이어 오프셋 추출
+// RuntimeInstanceID was measured on both the live effect and its tree operator
+// in timing diagnostic V2. Node handles themselves change on reacquisition.
+static bool AdjustmentOwnsEffect(
+    PrSDKVideoSegmentSuite* suite, PrSDKMemoryManagerSuite* memory,
+    csSDK_int32 adjustment, PrTime targetInstance)
+{
+    if (!suite || !memory || targetInstance <= 0) return false;
+    csSDK_int32 count = 0;
+    if (suite->GetNodeInputCount(adjustment, &count) != suiteError_NoError) return false;
+    for (int i = count - 1; i >= 0; --i) {
+        PrTime offset = 0;
+        csSDK_int32 child = 0;
+        if (suite->AcquireInputNodeID(adjustment, i, &offset, &child) != suiteError_NoError || !child) continue;
+        char type[256] = {};
+        prPluginID hash = {};
+        csSDK_int32 flags = 0;
+        suite->GetNodeInfo(child, type, &hash, &flags);
+        bool matches = false;
+        // Only the adjustment's own Clip operators; never descend into background.
+        if (strstr(type, "Clip") != nullptr) {
+            csSDK_int32 operators = 0;
+            suite->GetNodeOperatorCount(child, &operators);
+            for (int j = 0; j < operators; ++j) {
+                csSDK_int32 op = 0;
+                if (suite->AcquireOperatorNodeID(child, j, &op) != suiteError_NoError || !op) continue;
+                PrMemoryPtr value = nullptr;
+                if (suite->GetNodeProperty(op, "EffectNode::RuntimeInstanceID", &value) == suiteError_NoError && value) {
+                    PrTime instance = 0;
+                    std::istringstream stream((const char*)value);
+                    if ((stream >> instance) && instance == targetInstance) matches = true;
+                    memory->PrDisposePtr(value);
+                }
+                suite->ReleaseVideoNodeID(op);
+                if (matches) break;
+            }
+        }
+        suite->ReleaseVideoNodeID(child);
+        if (matches) return true;
+    }
+    return false;
+}
+
+static PrTime GetEffectRuntimeInstance(
+    PrSDKVideoSegmentSuite* suite, PrSDKMemoryManagerSuite* memory, csSDK_int32 effect)
+{
+    if (!suite || !memory) return 0;
+    PrMemoryPtr value = nullptr;
+    PrTime instance = 0;
+    if (suite->GetNodeProperty(effect, "EffectNode::RuntimeInstanceID", &value) == suiteError_NoError && value) {
+        std::istringstream stream((const char*)value);
+        if (!(stream >> instance)) instance = 0;
+        memory->PrDisposePtr(value);
+    }
+    return instance;
+}
+
 static bool FindAdjustmentLayerInPoint(
     PrSDKVideoSegmentSuite* segmentSuite,
     PrSDKMemoryManagerSuite* memSuite,
     csSDK_int32 segNodeID,
+    PrTime targetInstance,
     PrTime* outInPointTicks,
     PrTime* outHeadTransitionTicks = nullptr,
     PrTime* outLayerOffsetTicks = nullptr)
 {
-    if (!segmentSuite || !memSuite || segNodeID == 0 || !outInPointTicks)
+    if (!segmentSuite || !memSuite || segNodeID == 0 || !outInPointTicks || targetInstance <= 0)
     {
         return false;
     }
@@ -533,10 +591,12 @@ static bool FindAdjustmentLayerInPoint(
                 csSDK_int32 flags = 0;
                 segmentSuite->GetNodeInfo(layerID, lType, &hash, &flags);
 
+
                 // 1) 직접 조정 레이어(RenderableNode_AdjustmentImpl) 노드 발견 시
                 if (strstr(lType, "Adjustment") != nullptr)
                 {
-                    if (ExtractFromAdjustmentNode(segmentSuite, memSuite, layerID, outInPointTicks, outHeadTransitionTicks))
+                    if (AdjustmentOwnsEffect(segmentSuite, memSuite, layerID, targetInstance) &&
+                        ExtractFromAdjustmentNode(segmentSuite, memSuite, layerID, outInPointTicks, outHeadTransitionTicks))
                     {
                         if (outLayerOffsetTicks) *outLayerOffsetTicks = 0;
                         segmentSuite->ReleaseVideoNodeID(layerID);
@@ -546,32 +606,7 @@ static bool FindAdjustmentLayerInPoint(
                 // 2) 전환 노드(RenderableNodeTransitionImpl) 발견 시 -> 내부 입력에서 후속 조정 레이어 탐색
                 else if (strstr(lType, "Transition") != nullptr)
                 {
-                    // 트랜지션 노드 자체의 속성 탐색
-                    PrTime transDuration = 0;
-                    const char* durPropNames[] = {
-                        "TransitionNode::DurationAsTicks",
-                        "Node::DurationAsTicks",
-                        "TrackItem::DurationAsTicks",
-                        "Transition::DurationAsTicks",
-                        "ClipNode::TrackItemDurationAsTicks",
-                        "ClipNode::DurationAsTicks"
-                    };
-                    for (const char* propName : durPropNames)
-                    {
-                        PrMemoryPtr durBuf = nullptr;
-                        if (segmentSuite->GetNodeProperty(layerID, propName, &durBuf) == suiteError_NoError && durBuf)
-                        {
-                            std::istringstream stream((const char*)durBuf);
-                            stream >> transDuration;
-                            memSuite->PrDisposePtr(durBuf);
-                            if (transDuration > 0)
-                            {
-                                break;
-                            }
-                        }
-                    }
-
-                    // 트랜지션 노드의 입력 순회 (뒤쪽 클립인 B-roll을 찾기 위해 마지막 인덱스부터 역순 탐색)
+                    // Search both sides, accepting only the current effect owner.
                     csSDK_int32 transInCount = 0;
                     if (segmentSuite->GetNodeInputCount(layerID, &transInCount) == suiteError_NoError && transInCount > 0)
                     {
@@ -619,25 +654,15 @@ static bool FindAdjustmentLayerInPoint(
                                 {
                                     PrTime subInPoint = 0;
                                     PrTime subTrans = 0;
-                                    if (ExtractFromAdjustmentNode(segmentSuite, memSuite, targetAdjID, &subInPoint, &subTrans, true))
+                                    if (AdjustmentOwnsEffect(segmentSuite, memSuite, targetAdjID, targetInstance) &&
+                                        ExtractFromAdjustmentNode(segmentSuite, memSuite, targetAdjID, &subInPoint, &subTrans, ti == 1))
                                     {
                                         *outInPointTicks = subInPoint;
                                         if (outLayerOffsetTicks) *outLayerOffsetTicks = tiOff;
 
-                                        // 헤드 트랜지션 길이 산출:
-                                        // 1순위: 클립 노드에서 감지된 길이
-                                        // 2순위: 트랜지션 노드 지속시간의 절반 (중앙 정렬 크로스페이드)
-                                        // 3순위: 트랜지션 노드 전체 지속시간
-                                        PrTime resolvedHeadTrans = 0;
-                                        if (subTrans > 0)
-                                        {
-                                            resolvedHeadTrans = subTrans;
-                                        }
-                                        else if (transDuration > 0)
-                                        {
-                                            resolvedHeadTrans = transDuration / 2;
-                                        }
-
+                                        // Only the incoming side may derive head timing from this transition.
+                                        // Do not assume half of a transition duration (alignment can vary).
+                                        PrTime resolvedHeadTrans = subTrans;
                                         if (outHeadTransitionTicks) *outHeadTransitionTicks = resolvedHeadTrans;
 
                                         if (needReleaseTarget) segmentSuite->ReleaseVideoNodeID(targetAdjID);
@@ -664,11 +689,7 @@ static bool FindAdjustmentLayerInPoint(
 class AutoTransformGPUFilter : public PrGPUFilterBase
 {
 public:
-    AutoTransformGPUFilter()
-        : mCachedHeadTransitionTicks(0)
-        , mCachedInPointTicks(-1)
-    {
-    }
+    AutoTransformGPUFilter() = default;
 
     virtual ~AutoTransformGPUFilter()
     {
@@ -677,9 +698,6 @@ public:
     virtual prSuiteError Initialize(PrGPUFilterInstance* ioInstanceData) override
     {
         PrGPUFilterBase::Initialize(ioInstanceData);
-
-        mCachedHeadTransitionTicks = 0;
-        mCachedInPointTicks = -1;
 
         if (mSuites && mSuites->utilFuncs && mSuites->utilFuncs->getSPBasicSuite())
         {
@@ -823,6 +841,7 @@ public:
                 mVideoSegmentSuite->AcquireOperatorOwnerNodeID(mNodeID, &ownerNodeID);
             }
 
+
             // =========================================================================
             // [정석 InPoint 시간 계산: 일반 비디오 및 조정 레이어 분할 완벽 대응]
             // =========================================================================
@@ -851,6 +870,8 @@ public:
                 }
             }
 
+            const PrTime targetInstance = GetEffectRuntimeInstance(mVideoSegmentSuite, mMemoryManagerSuite, mNodeID);
+
             // [경로 2: 조정 레이어] ownerNodeID가 0이거나 경로 1에서 계산되지 않은 경우
             if (!frameCalculated && mVideoSegmentSuite && mMemoryManagerSuite && mTimelineID != 0)
             {
@@ -864,55 +885,38 @@ public:
                         PrTime inPointTicks = 0;
                         PrTime headTransitionTicks = 0;
                         PrTime layerOffsetTicks = 0;
-                        if (FindAdjustmentLayerInPoint(mVideoSegmentSuite, mMemoryManagerSuite, segNodeID, &inPointTicks, &headTransitionTicks, &layerOffsetTicks))
+                        if (FindAdjustmentLayerInPoint(mVideoSegmentSuite, mMemoryManagerSuite, segNodeID, targetInstance, &inPointTicks, &headTransitionTicks, &layerOffsetTicks))
                         {
                             PrTime effectiveClipTime = inRenderParams->inClipTime + layerOffsetTicks;
 
-                            // [헤드 트랜지션 캐시 및 역탐색 복원 로직]
-                            if (headTransitionTicks > 0)
+                            // Re-probe this effect's start transition when outside it.
+                            // This keeps the result independent of render order and old edits.
+                            if (headTransitionTicks == 0)
                             {
-                                // 1. 전환 구간 내부: 감지된 헤드 트랜지션 길이를 캐시에 저장
-                                mCachedHeadTransitionTicks = headTransitionTicks;
-                                mCachedInPointTicks = inPointTicks;
-                            }
-                            else
-                            {
-                                // 2. 전환 구간 종료 후(headTransitionTicks == 0):
-                                // 2-1) 캐시 복원: 현재 클립 InPoint가 캐시된 InPoint와 일치하면 캐시 사용
-                                if (inPointTicks == mCachedInPointTicks && mCachedHeadTransitionTicks > 0)
+                                // 플레이헤드가 전환 구간을 거치지 않고 직접 배치되었을 때,
+                                // 현재 클립의 컷 시작 시점 직전(testSeqTime)을 역탐색하여 트랜지션 유무 확인
+                                PrTime cutSeqTime = inRenderParams->inSequenceTime - (effectiveClipTime - inPointTicks);
+                                PrTime testSeqTime = cutSeqTime - (ticksPerFrame / 2);
+                                if (testSeqTime >= 0)
                                 {
-                                    headTransitionTicks = mCachedHeadTransitionTicks;
-                                }
-                                else
-                                {
-                                    // 2-2) 선제 역탐색: 플레이헤드가 전환 구간을 거치지 않고 직접 배치되었을 때,
-                                    // 현재 클립의 컷 시작 시점 직전(testSeqTime)을 역탐색하여 트랜지션 유무 확인
-                                    PrTime cutSeqTime = inRenderParams->inSequenceTime - (effectiveClipTime - inPointTicks);
-                                    PrTime testSeqTime = cutSeqTime - (ticksPerFrame / 2);
-                                    if (testSeqTime >= 0)
+                                    csSDK_int32 testSegNodeID = 0;
+                                    PrTime testSegOffset = 0;
+                                    if (mVideoSegmentSuite->AcquireNodeForTime(videoSegmentsID, testSeqTime, &testSegNodeID, &testSegOffset) == suiteError_NoError && testSegNodeID != 0)
                                     {
-                                        csSDK_int32 testSegNodeID = 0;
-                                        PrTime testSegOffset = 0;
-                                        if (mVideoSegmentSuite->AcquireNodeForTime(videoSegmentsID, testSeqTime, &testSegNodeID, &testSegOffset) == suiteError_NoError && testSegNodeID != 0)
+                                        PrTime testInPoint = 0;
+                                        PrTime testHeadTrans = 0;
+                                        PrTime testLayerOff = 0;
+                                        if (FindAdjustmentLayerInPoint(mVideoSegmentSuite, mMemoryManagerSuite, testSegNodeID, targetInstance, &testInPoint, &testHeadTrans, &testLayerOff))
                                         {
-                                            PrTime testInPoint = 0;
-                                            PrTime testHeadTrans = 0;
-                                            PrTime testLayerOff = 0;
-                                            if (FindAdjustmentLayerInPoint(mVideoSegmentSuite, mMemoryManagerSuite, testSegNodeID, &testInPoint, &testHeadTrans, &testLayerOff))
+                                            if (testInPoint == inPointTicks && testHeadTrans > 0)
                                             {
-                                                if (testInPoint == inPointTicks && testHeadTrans > 0)
-                                                {
-                                                    headTransitionTicks = testHeadTrans;
-                                                    mCachedHeadTransitionTicks = testHeadTrans;
-                                                    mCachedInPointTicks = inPointTicks;
-                                                }
+                                                headTransitionTicks = testHeadTrans;
                                             }
-                                            mVideoSegmentSuite->ReleaseVideoNodeID(testSegNodeID);
                                         }
+                                        mVideoSegmentSuite->ReleaseVideoNodeID(testSegNodeID);
                                     }
                                 }
                             }
-
                             PrTime adjustedInPointTicks = inPointTicks - headTransitionTicks;
                             PrTime elapsedTicks = effectiveClipTime - adjustedInPointTicks;
 
@@ -973,6 +977,7 @@ public:
             {
                 currentFrame = 0;
             }
+
 
             // --- 2. 파라미터 값 읽기 ---
             PrTime tTime = inRenderParams->inClipTime;
@@ -1254,8 +1259,6 @@ public:
 
 private:
     PrSDKSequenceInfoSuite* mSequenceInfoSuite = nullptr;
-    PrTime mCachedHeadTransitionTicks = 0;
-    PrTime mCachedInPointTicks = -1;
 };
 
 // Premiere Pro 네이티브 GPU 필터 엔트리포인트 선언

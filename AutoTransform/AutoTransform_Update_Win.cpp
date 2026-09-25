@@ -8,7 +8,7 @@
 #pragma comment(lib, "shell32.lib")
 
 bool AT_FetchLatestReleaseJSON(std::string& response) {
-    HINTERNET session = WinHttpOpen(L"MasterDuel Transform Update Check/0.1.2",
+    HINTERNET session = WinHttpOpen(L"MasterDuel Transform Update Check/0.1.3",
                                    WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
                                    WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!session) return false;

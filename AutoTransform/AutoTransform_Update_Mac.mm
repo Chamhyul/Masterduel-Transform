@@ -8,7 +8,7 @@ bool AT_FetchLatestReleaseJSON(std::string& response) {
         NSMutableURLRequest* request = [NSMutableURLRequest requestWithURL:url
             cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:3.0];
         [request setValue:@"application/vnd.github+json" forHTTPHeaderField:@"Accept"];
-        [request setValue:@"MasterDuel Transform Update Check/0.1.2" forHTTPHeaderField:@"User-Agent"];
+        [request setValue:@"MasterDuel Transform Update Check/0.1.3" forHTTPHeaderField:@"User-Agent"];
 
         NSURLResponse* rawResponse = nil;
         NSError* error = nil;

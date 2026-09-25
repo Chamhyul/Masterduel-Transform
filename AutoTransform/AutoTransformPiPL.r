@@ -26,7 +26,6 @@ resource 'PiPL' (16000) {
 		CodeWinARM64 {"EffectMain"},
     #endif
 #elif defined(AE_OS_MAC)
-		CodeMacIntel64 {"EffectMain"},
 		CodeMacARM64 {"EffectMain"},
 #endif
 		/* [6] */
@@ -41,7 +40,7 @@ resource 'PiPL' (16000) {
 		},
 		/* [8] */
 		AE_Effect_Version {
-			36865	/* PF_VERSION(0, 1, 2, PF_Stage_DEVELOP, 1) */
+			38913	/* PF_VERSION(0, 1, 3, PF_Stage_DEVELOP, 1) */
 		},
 		/* [9] */
 		AE_Effect_Info_Flags {
