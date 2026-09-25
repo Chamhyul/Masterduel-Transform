@@ -176,13 +176,12 @@ static PF_Err ParamsSetup(
     PF_Err      err = PF_Err_NONE;
     PF_ParamDef def;
 
-    /* 다운로드 안내는 렌더링 값이 아닌 UI 전용이며, 기본적으로 행 전체를 숨긴다. */
+    /* 다운로드 안내는 렌더링 값이 아닌 UI 전용 버튼이며, 기본적으로 숨긴다. */
     AEFX_CLR_STRUCT(def);
-    def.flags = PF_ParamFlag_CANNOT_TIME_VARY | PF_ParamFlag_CANNOT_INTERP;
-    def.ui_flags = PF_PUI_CONTROL | PF_PUI_INVISIBLE | PF_PUI_DONT_ERASE_CONTROL;
-    def.ui_width = UI_GRID_WIDTH;
-    def.ui_height = 26;
-    PF_ADD_CHECKBOX(STR(StrID_UpdateBanner_Name), "", FALSE, 0, UPDATE_BANNER_DISK_ID);
+    PF_ADD_BUTTON(STR(StrID_UpdateBanner_Name), "Open GitHub Releases",
+                  PF_PUI_INVISIBLE,
+                  PF_ParamFlag_SUPERVISE | PF_ParamFlag_CANNOT_TIME_VARY,
+                  UPDATE_BANNER_DISK_ID);
 
     /* ============================================================
      *  1. Transform Group (최상단, 기본 접힘)
@@ -657,6 +656,12 @@ static PF_Err UserChangedParam(
     if (!extra) return err;
 
     const A_long paramIdx = extra->param_index;
+
+    if (paramIdx == AT_UPDATE_BANNER)
+    {
+        if (AT_IsUpdateAvailable()) AT_OpenLatestReleasePage();
+        return PF_Err_NONE;
+    }
 
     if (s_isInternalUpdating)
     {
@@ -1265,8 +1270,7 @@ static PF_Err DrawEvent(
     {
         return err;
     }
-    if (event_extra->effect_win.index != AT_GRID_UI &&
-        event_extra->effect_win.index != AT_UPDATE_BANNER) return err;
+    if (event_extra->effect_win.index != AT_GRID_UI) return err;
 
     DRAWBOT_Suites drawbotSuites;
     ERR(AEFX_AcquireDrawbotSuites(in_data, out_data, &drawbotSuites));
@@ -1307,16 +1311,6 @@ static PF_Err DrawEvent(
             float totalH  = (float)(event_extra->effect_win.current_frame.bottom - event_extra->effect_win.current_frame.top);
             if (totalW < 180.0f) totalW = (float)UI_GRID_WIDTH;
 
-            if (event_extra->effect_win.index == AT_UPDATE_BANNER)
-            {
-                DRAWBOT_RectF32 banner = {originX + 3.0f, originY + 2.0f,
-                                         totalW - 6.0f, totalH - 4.0f};
-                DrawSingleButton(&drawbotSuites, surface_ref, supplier_ref, font_ref,
-                                 banner, ButtonColorState::CustomBlue,
-                                 "Update available - GitHub");
-            }
-            else
-            {
             UIStateInfo uiState = GetUIStateInfo(params, in_data);
 
             // 1. 호스트 패널 테마 배경색 취득 및 배경 채우기 (패널 일체화 투명화)
@@ -1464,7 +1458,6 @@ static PF_Err DrawEvent(
 
                 drawbotSuites.supplier_suiteP->ReleaseObject(reinterpret_cast<DRAWBOT_ObjectRef>(customBrush));
             }
-            }
             drawbotSuites.supplier_suiteP->ReleaseObject(reinterpret_cast<DRAWBOT_ObjectRef>(font_ref));
         }
     }
@@ -1497,12 +1490,6 @@ static PF_Err DoClick(
         return err;
     }
 
-    if (event_extra->effect_win.index == AT_UPDATE_BANNER)
-    {
-        if (AT_IsUpdateAvailable()) AT_OpenLatestReleasePage();
-        event_extra->evt_out_flags |= PF_EO_HANDLED_EVENT;
-        return err;
-    }
     if (event_extra->effect_win.index != AT_GRID_UI) return err;
 
     AEGP_SuiteHandler suites(in_data->pica_basicP);
@@ -1682,8 +1669,7 @@ static PF_Err ChangeCursor(
     PF_EventExtra* event_extra)
 {
     if (event_extra->effect_win.area == PF_EA_CONTROL &&
-        (event_extra->effect_win.index == AT_GRID_UI ||
-         event_extra->effect_win.index == AT_UPDATE_BANNER))
+        event_extra->effect_win.index == AT_GRID_UI)
     {
         event_extra->u.adjust_cursor.set_cursor = PF_Cursor_HAND;
     }

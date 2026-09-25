@@ -10,6 +10,10 @@ PLUGIN_BUNDLE="$BUILD_DIR/AutoTransform.plugin"
 ROOT_DIR="$(cd "$PROJ_DIR/.." && pwd)"
 VERSION="0.1.3"
 OUTPUT_PKG="${OUTPUT_PKG:-$ROOT_DIR/macOS_MD_Transform.v${VERSION}.pkg}"
+VERSION_CHECKED="<true/>"
+if [ "${FORCE_REINSTALL:-0}" = "1" ]; then
+    VERSION_CHECKED="<false/>"
+fi
 
 echo "=== Packaging MasterDuel Transform v${VERSION} ==="
 echo "Bundle: $PLUGIN_BUNDLE"
@@ -34,7 +38,7 @@ cp "$PROJ_DIR/Mac/welcome.html" "$WORKDIR/resources/"
 cp "$ROOT_DIR/LICENSE" "$WORKDIR/resources/license.txt"
 
 # Generate component.plist for upgrade/version checking
-cat << 'EOF' > "$WORKDIR/component.plist"
+cat << EOF > "$WORKDIR/component.plist"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -45,7 +49,7 @@ cat << 'EOF' > "$WORKDIR/component.plist"
 		<key>BundleIsRelocatable</key>
 		<false/>
 		<key>BundleIsVersionChecked</key>
-		<true/>
+		${VERSION_CHECKED}
 		<key>BundleOverwriteAction</key>
 		<string>upgrade</string>
 		<key>RootRelativeBundlePath</key>
